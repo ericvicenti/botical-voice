@@ -1,0 +1,43 @@
+{
+  "name": "Botical3",
+  "version": "1.0.0",
+  "description": "Real-time voice assistant with LiveKit Agents",
+  "type": "module",
+  "scripts": {
+    "dev": "trap 'kill 0' EXIT; tsx src/token-server.ts & tsx src/main.ts dev",
+    "dev:agent": "tsx src/main.ts dev",
+    "build": "vite build",
+    "start": "node dist/main.js start",
+    "download-files": "tsx src/main.ts download-files",
+    "client": "tsx src/token-server.ts"
+  },
+  "license": "ISC",
+  "packageManager": "pnpm@10.30.1",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@ffmpeg-installer/darwin-arm64",
+      "esbuild",
+      "onnxruntime-node",
+      "protobufjs",
+      "sharp"
+    ],
+    "patchedDependencies": {
+      "@livekit/agents": "patches/@livekit__agents.patch"
+    }
+  },
+  "dependencies": {
+    "@livekit/agents": "^1.0.47",
+    "@livekit/agents-plugin-cartesia": "^1.0.47",
+    "@livekit/agents-plugin-deepgram": "^1.0.47",
+    "@livekit/agents-plugin-livekit": "^1.0.47",
+    "@livekit/agents-plugin-openai": "^1.0.47",
+    "@livekit/agents-plugin-silero": "^1.0.47",
+    "@types/node": "^25.3.0",
+    "dotenv": "^17.3.1",
+    "livekit-server-sdk": "^2.15.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "zod": "^4.3.6"
+  }
+}

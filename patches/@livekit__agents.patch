@@ -1,0 +1,39 @@
+diff --git a/dist/voice/generation.cjs b/dist/voice/generation.cjs
+index 89d534d0ae27b33b0b7acdd62a98c2868af5c5a5..402cb48fd04c761a415fabd9a222d2e285a4be37 100644
+--- a/dist/voice/generation.cjs
++++ b/dist/voice/generation.cjs
+@@ -353,7 +353,7 @@ function performLLMInference(node, chatCtx, toolCtx, modelSettings, controller)
+             for (const tool of chunk.delta.toolCalls) {
+               if (tool.type !== "function_call") continue;
+               const toolCall = import_chat_context.FunctionCall.create({
+-                callId: `${data.id}/fnc_${data.generatedToolCalls.length}`,
++                callId: `${data.id}-fnc_${data.generatedToolCalls.length}`,
+                 name: tool.name,
+                 args: tool.args,
+                 // Preserve thought signature for Gemini 3+ thinking mode
+diff --git a/dist/voice/generation.js b/dist/voice/generation.js
+index 014389c90e6ec91b30fe65771d966ed220c5b8c0..d5db05c031a234e281b06fe7e07df4705c8a60c7 100644
+--- a/dist/voice/generation.js
++++ b/dist/voice/generation.js
+@@ -334,7 +334,7 @@ function performLLMInference(node, chatCtx, toolCtx, modelSettings, controller)
+             for (const tool of chunk.delta.toolCalls) {
+               if (tool.type !== "function_call") continue;
+               const toolCall = FunctionCall.create({
+-                callId: `${data.id}/fnc_${data.generatedToolCalls.length}`,
++                callId: `${data.id}-fnc_${data.generatedToolCalls.length}`,
+                 name: tool.name,
+                 args: tool.args,
+                 // Preserve thought signature for Gemini 3+ thinking mode
+diff --git a/src/voice/generation.ts b/src/voice/generation.ts
+index 1f141ab37249f28fdce9977ddae8aea9373af840..8419d79edf061df162662563da07a9c49f393123 100644
+--- a/src/voice/generation.ts
++++ b/src/voice/generation.ts
+@@ -469,7 +469,7 @@ export function performLLMInference(
+               if (tool.type !== 'function_call') continue;
+ 
+               const toolCall = FunctionCall.create({
+-                callId: `${data.id}/fnc_${data.generatedToolCalls.length}`,
++                callId: `${data.id}-fnc_${data.generatedToolCalls.length}`,
+                 name: tool.name,
+                 args: tool.args,
+                 // Preserve thought signature for Gemini 3+ thinking mode
