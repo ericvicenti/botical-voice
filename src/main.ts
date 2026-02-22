@@ -199,10 +199,36 @@ export default defineAgent({
   },
 });
 
+// Custom load function: Bun on Linux can return identical os.cpus() times across
+// samples, producing NaN. NaN load causes the LiveKit server's affinity calculation
+// to fail (1-NaN=NaN), so job requests are silently dropped. Fall back to 0 if NaN.
+async function cpuLoad(): Promise<number> {
+  const os = await import('node:os');
+  const cpus1 = os.cpus();
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const cpus2 = os.cpus();
+      let idle = 0;
+      let total = 0;
+      for (let i = 0; i < cpus1.length; i++) {
+        const t1 = cpus1[i]!.times;
+        const t2 = cpus2[i]!.times;
+        idle += t2.idle - t1.idle;
+        const s1 = Object.values(t1).reduce((a, b) => a + b, 0);
+        const s2 = Object.values(t2).reduce((a, b) => a + b, 0);
+        total += s2 - s1;
+      }
+      const load = +(1 - idle / total).toFixed(2);
+      resolve(Number.isFinite(load) ? load : 0);
+    }, 2500);
+  });
+}
+
 cli.runApp(new ServerOptions({
   agent: import.meta.filename,
   agentName: 'botical',
   wsURL: process.env.LIVEKIT_URL ?? 'ws://localhost:7880',
   apiKey: process.env.LIVEKIT_API_KEY ?? 'devkey',
   apiSecret: process.env.LIVEKIT_API_SECRET ?? 'secret',
+  loadFunc: cpuLoad,
 }));
