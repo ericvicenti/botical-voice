@@ -54,7 +54,7 @@ export default defineAgent({
       tts: new cartesia.TTS({
         language: 'en',
         voice: '6c9e08ad-6629-4ba3-a640-a0bae916dfff',
-        model: 'sonic-2-2025-03-07',
+        model: 'sonic-3',
         speed: 'slow',
         emotion: ['positivity:high']
       }),
