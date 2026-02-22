@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import { cli, defineAgent, voice, ServerOptions, metrics } from '@livekit/agents';
 import * as openai from '@livekit/agents-plugin-openai';
 import * as deepgram from '@livekit/agents-plugin-deepgram';

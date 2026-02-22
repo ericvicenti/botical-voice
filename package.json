@@ -4,28 +4,18 @@
   "description": "Real-time voice assistant with LiveKit Agents",
   "type": "module",
   "scripts": {
-    "dev": "trap 'kill 0' EXIT; tsx src/token-server.ts & tsx src/main.ts dev",
-    "dev:agent": "tsx src/main.ts dev",
-    "build": "vite build",
+    "dev": "bun run build:client && trap 'kill 0' EXIT; bun run src/token-server.ts & bun run src/main.ts dev",
+    "dev:agent": "bun run src/main.ts dev",
+    "build:client": "bun build client/index.html --outdir dist/client --minify --sourcemap=external",
     "build:livekit": "cd livekit-server && go build -o ../dist/livekit-server ./cmd/server",
-    "start": "node dist/main.js start",
-    "download-files": "tsx src/main.ts download-files",
-    "client": "tsx src/token-server.ts"
+    "start": "bun run src/main.ts start",
+    "download-files": "bun run src/main.ts download-files",
+    "client": "bun run src/token-server.ts"
   },
   "license": "ISC",
-  "packageManager": "pnpm@10.30.1",
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@ffmpeg-installer/darwin-arm64",
-      "esbuild",
-      "onnxruntime-node",
-      "protobufjs",
-      "sharp"
-    ],
-    "patchedDependencies": {
-      "@livekit/agents": "patches/@livekit__agents.patch",
-      "@livekit/agents-plugin-cartesia": "patches/@livekit__agents-plugin-cartesia.patch"
-    }
+  "patchedDependencies": {
+    "@livekit/agents": "patches/@livekit__agents.patch",
+    "@livekit/agents-plugin-cartesia": "patches/@livekit__agents-plugin-cartesia.patch"
   },
   "dependencies": {
     "@livekit/agents": "^1.0.47",
@@ -34,12 +24,12 @@
     "@livekit/agents-plugin-livekit": "^1.0.47",
     "@livekit/agents-plugin-openai": "^1.0.47",
     "@livekit/agents-plugin-silero": "^1.0.47",
-    "@types/node": "^25.3.0",
-    "dotenv": "^17.3.1",
+    "livekit-client": "^2.0.0",
     "livekit-server-sdk": "^2.15.0",
-    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
-    "vite": "^7.3.1",
     "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
   }
 }

@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -10,6 +9,21 @@ const LIVEKIT_URL = 'ws://localhost:7880';
 const API_KEY = 'devkey';
 const API_SECRET = 'secret';
 const LIVEKIT_HOST = 'http://localhost:7880';
+
+const DIST_CLIENT = join(import.meta.dirname, '../dist/client');
+
+const MIME_TYPES: Record<string, string> = {
+  html: 'text/html',
+  js: 'application/javascript',
+  css: 'text/css',
+  map: 'application/json',
+  wav: 'audio/wav',
+  mp3: 'audio/mpeg',
+  ogg: 'audio/ogg',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  svg: 'image/svg+xml',
+};
 
 function ts(): string {
   return new Date().toISOString().slice(11, 23);
@@ -60,34 +74,59 @@ const server = createServer(async (req, res) => {
     return;
   }
 
+  // Serve built frontend index
   if (url.pathname === '/' || url.pathname === '/index.html') {
-    const html = await readFile(join(import.meta.dirname, '../client/index.html'), 'utf-8');
-    res.writeHead(200, { 'Content-Type': 'text/html' });
-    res.end(html);
+    try {
+      const html = await readFile(join(DIST_CLIENT, 'index.html'), 'utf-8');
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(html);
+    } catch {
+      res.writeHead(500, { 'Content-Type': 'text/plain' });
+      res.end('Frontend not built. Run: bun run build:client');
+    }
     return;
   }
 
+  // Serve static assets from assets/ directory
   if (url.pathname.startsWith('/assets/')) {
     const filename = url.pathname.slice('/assets/'.length);
-    // Only allow simple filenames (no path traversal)
     if (filename && !filename.includes('/') && !filename.includes('..')) {
       try {
         const data = await readFile(join(import.meta.dirname, '../assets', filename));
-        const ext = filename.split('.').pop()?.toLowerCase();
-        const mimeTypes: Record<string, string> = {
-          wav: 'audio/wav',
-          mp3: 'audio/mpeg',
-          ogg: 'audio/ogg',
-          png: 'image/png',
-          jpg: 'image/jpeg',
-          svg: 'image/svg+xml',
-        };
-        res.writeHead(200, { 'Content-Type': mimeTypes[ext ?? ''] ?? 'application/octet-stream' });
+        const ext = filename.split('.').pop()?.toLowerCase() ?? '';
+        res.writeHead(200, { 'Content-Type': MIME_TYPES[ext] ?? 'application/octet-stream' });
         res.end(data);
         return;
       } catch {
         // fall through to 404
       }
+    }
+  }
+
+  // Serve built frontend static files (JS, CSS, source maps)
+  if (url.pathname.match(/\.(js|css|map)$/)) {
+    try {
+      const filePath = join(DIST_CLIENT, url.pathname);
+      // Prevent path traversal
+      if (!filePath.startsWith(DIST_CLIENT)) {
+        res.writeHead(403);
+        res.end('Forbidden');
+        return;
+      }
+      const data = await readFile(filePath);
+      const ext = url.pathname.split('.').pop()?.toLowerCase() ?? '';
+      const headers: Record<string, string> = {
+        'Content-Type': MIME_TYPES[ext] ?? 'application/octet-stream',
+      };
+      // Content-hashed files get immutable caching
+      if (url.pathname.match(/-[a-f0-9]+\./)) {
+        headers['Cache-Control'] = 'public, max-age=31536000, immutable';
+      }
+      res.writeHead(200, headers);
+      res.end(data);
+      return;
+    } catch {
+      // fall through to 404
     }
   }
 

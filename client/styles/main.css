@@ -1,0 +1,293 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #0a0a0a;
+  color: #e0e0e0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* --- Header --- */
+.header {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #1e1e1e;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.header-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-right: auto;
+}
+.status-badge {
+  font-size: 0.75rem;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #222;
+  color: #888;
+}
+.status-badge.connected {
+  background: #1b3a1b;
+  color: #4CAF50;
+}
+.header-btn {
+  background: none;
+  border: 1px solid #333;
+  color: #ccc;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.header-btn:hover { border-color: #555; color: #fff; }
+
+/* --- Chat area --- */
+.chat-container {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+.chat-messages {
+  height: 100%;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* --- Messages --- */
+.msg {
+  max-width: 80%;
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  word-wrap: break-word;
+  animation: fadeIn 0.15s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.msg.user {
+  align-self: flex-end;
+  background: #1a4a8a;
+  color: #e8f0fe;
+  border-bottom-right-radius: 4px;
+}
+.msg.agent {
+  align-self: flex-start;
+  background: #1e1e1e;
+  color: #e0e0e0;
+  border-bottom-left-radius: 4px;
+}
+.msg.interim {
+  opacity: 0.5;
+}
+
+/* --- Voice state indicator --- */
+.voice-state {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 16px;
+  background: #0f0f0f;
+  border-top: 1px solid #1e1e1e;
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  color: #666;
+}
+.voice-state.visible { display: flex; }
+.voice-state-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #555;
+  transition: background 0.2s;
+}
+.voice-state.listening .voice-state-dot { background: #4CAF50; }
+.voice-state.thinking .voice-state-dot {
+  background: #FFB74D;
+  animation: pulse 1.2s infinite;
+}
+.voice-state.speaking .voice-state-dot {
+  background: #42A5F5;
+  animation: pulse 0.8s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+/* --- Tool call cards --- */
+.tool-card {
+  align-self: flex-start;
+  background: #161622;
+  border: 1px solid #2a2a3a;
+  border-radius: 10px;
+  max-width: 80%;
+  font-size: 0.82rem;
+  animation: fadeIn 0.15s ease;
+  overflow: hidden;
+}
+.tool-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+  user-select: none;
+}
+.tool-header:hover { background: #1c1c2e; }
+.tool-icon { font-size: 0.9rem; }
+.tool-name { font-weight: 500; color: #b0b0d0; }
+.tool-toggle {
+  margin-left: auto;
+  color: #555;
+  font-size: 0.7rem;
+  transition: transform 0.2s;
+}
+.tool-toggle.open { transform: rotate(90deg); }
+.tool-details {
+  display: none;
+  padding: 0 12px 10px;
+  border-top: 1px solid #222233;
+}
+.tool-details.open { display: block; }
+.tool-label {
+  font-size: 0.7rem;
+  color: #666;
+  text-transform: uppercase;
+  margin-top: 8px;
+  margin-bottom: 2px;
+}
+.tool-content {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.78rem;
+  color: #aaa;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.tool-error { color: #f44336; }
+
+/* --- Input bar --- */
+.input-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid #1e1e1e;
+  background: #0f0f0f;
+  flex-shrink: 0;
+}
+.voice-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: #1e1e1e;
+  color: #888;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.voice-btn.active {
+  background: #1b3a1b;
+  color: #4CAF50;
+}
+.voice-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.text-input {
+  flex: 1;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 20px;
+  padding: 10px 16px;
+  color: #e0e0e0;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.text-input:focus { border-color: #444; }
+.text-input:disabled { opacity: 0.3; }
+.text-input::placeholder { color: #555; }
+.send-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: #1a4a8a;
+  color: #fff;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.send-btn:hover { background: #2060b0; }
+.send-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* --- Debug panel --- */
+.debug-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 400px;
+  height: 100vh;
+  background: #0d0d0d;
+  border-left: 1px solid #1e1e1e;
+  transform: translateX(100%);
+  transition: transform 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+}
+.debug-panel.open { transform: translateX(0); }
+.debug-header {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #1e1e1e;
+  flex-shrink: 0;
+}
+.debug-header span { font-size: 0.85rem; font-weight: 500; color: #888; }
+.debug-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+.debug-close:hover { color: #aaa; }
+.debug-log {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 14px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.75rem;
+  line-height: 1.6;
+}
+.debug-entry { color: #FFD54F; }
+.debug-entry.error { color: #EF5350; }
+.debug-entry.info { color: #666; }
+
+/* --- Mobile --- */
+@media (max-width: 640px) {
+  .msg { max-width: 90%; }
+  .tool-card { max-width: 90%; }
+  .debug-panel { width: 100%; }
+}

@@ -1,20 +1,21 @@
 # Botical3
 
-Real-time voice assistant built with LiveKit Agents (TypeScript/Node.js), with a self-hosted LiveKit server.
+Real-time voice assistant built with LiveKit Agents (TypeScript/Bun), with a self-hosted LiveKit server.
 
 ## Quick Start
 
 ```bash
-pnpm install
-pnpm download-files   # downloads ~460MB turn detector ONNX models (first time only)
-pnpm dev              # starts LiveKit server + token-server + agent
+bun install
+bun run download-files   # downloads ~460MB turn detector ONNX models (first time only)
+bun dev                  # builds client, starts LiveKit server + token-server + agent
 ```
 
 Open http://localhost:3000, click Connect, and speak.
 
 ## Prerequisites
 
-- **Go 1.24+** — Managed automatically via [mise](https://mise.jdx.dev/) + [direnv](https://direnv.net/). Just `cd` into the project directory and Go will be available. If not already installed: `brew install mise direnv`.
+- **Bun** — Managed automatically via [mise](https://mise.jdx.dev/) + [direnv](https://direnv.net/). Just `cd` into the project directory and Bun will be available. If not already installed: `brew install mise direnv`.
+- **Go 1.24+** — Also managed via mise. Required for the self-hosted LiveKit server.
 
 ## Required Environment Variables
 
@@ -24,16 +25,35 @@ Copy `.env.example` to `.env` and fill in:
 - `DEEPGRAM_API_KEY` — Deepgram API key for streaming STT
 - `CARTESIA_API_KEY` — Cartesia API key for TTS
 
-LiveKit credentials are not needed — the server runs locally with hardcoded dev credentials (`devkey`/`secret`).
+LiveKit credentials are not needed — the server runs locally with hardcoded dev credentials (`devkey`/`secret`). Bun automatically loads `.env` files (no dotenv needed).
 
 ## Architecture
+
+### Frontend
+
+The browser client is a TypeScript app built with Bun's HTML bundler. Source lives in `client/`:
+
+```
+client/
+  index.html          — HTML shell with <script type="module"> and <link>
+  src/
+    main.ts           — Entry point, wires modules together
+    room.ts           — LiveKit room connection, events, reconnection
+    chat.ts           — Chat message rendering (user/agent/tool cards)
+    voice-state.ts    — Voice state indicator logic
+    debug.ts          — Debug panel logging
+  styles/
+    main.css          — All styles
+```
+
+Built output goes to `dist/client/` with content-hashed JS/CSS files. The token server serves these built files.
 
 ### LiveKit Server (Self-Hosted)
 
 The LiveKit WebRTC server source is vendored at `livekit-server/` via `git subtree` from [github.com/livekit/livekit](https://github.com/livekit/livekit). The token server starts it automatically as a child process on port 7880.
 
 - **Dev mode**: Uses `go run` for fast iteration — no build step needed
-- **Pre-built binary**: If `dist/livekit-server` exists (from `pnpm build:livekit`), uses that instead
+- **Pre-built binary**: If `dist/livekit-server` exists (from `bun run build:livekit`), uses that instead
 - **Port detection**: Skips starting if port 7880 is already in use
 - **Forking**: Edit Go source in `livekit-server/` directly. Pull upstream updates with: `git subtree pull --prefix=livekit-server --squash https://github.com/livekit/livekit.git master`
 
@@ -46,26 +66,26 @@ Browser mic -> LiveKit Server (localhost:7880, WebSocket) -> Agent:
 4. **LLM**: Anthropic Claude Sonnet 4.6 via OpenAI-compatible endpoint
 5. **TTS**: Cartesia Sonic (streaming)
 
-Audio flows Browser <-> LiveKit Server (local) <-> Agent. The token server only handles HTTP (token generation, serving the client HTML).
+Audio flows Browser <-> LiveKit Server (local) <-> Agent. The token server only handles HTTP (token generation, serving the built client).
 
 ### Key Files
 
 - `src/main.ts` — Agent entry point. `defineAgent({ prewarm, entry })` loads VAD model, creates the voice session with all providers, wires up comprehensive logging for every pipeline stage.
 - `src/agent.ts` — `BotAgent` class extending `voice.Agent`. Contains system instructions and tools (`get_time`, `set_reminder`). At least one tool must be defined (see Anthropic quirks below).
-- `src/token-server.ts` — HTTP server on port 3000. Starts LiveKit server, serves the client HTML at `/`, generates LiveKit tokens at `/api/token`, and creates explicit agent dispatches via `AgentDispatchClient`.
+- `src/token-server.ts` — HTTP server on port 3000. Starts LiveKit server, serves the built client from `dist/client/` at `/`, generates LiveKit tokens at `/api/token`, and creates explicit agent dispatches via `AgentDispatchClient`.
 - `src/livekit-server.ts` — LiveKit server child process manager. Handles starting, readiness detection, and graceful shutdown.
-- `client/index.html` — Browser client using LiveKit SDK from CDN. Has comprehensive debug logging in a transcript panel (color-coded: yellow=debug, red=error, blue=user speech, green=agent speech).
+- `client/` — Frontend TypeScript source (see Frontend section above).
 - `livekit-server/` — Vendored LiveKit Go source (git subtree).
-- `patches/@livekit__agents.patch` — pnpm patch fixing Anthropic tool call ID compatibility (see below).
+- `patches/@livekit__agents.patch` — Patch fixing Anthropic tool call ID compatibility (see below).
 
 ### Scripts
 
-- `pnpm dev` — Run LiveKit server + token-server + agent together (use this for development)
-- `pnpm dev:agent` — Run agent only (assumes LiveKit server already running)
-- `pnpm client` — Run token server + LiveKit server only (no agent)
-- `pnpm build:livekit` — Compile LiveKit server Go binary to `dist/livekit-server`
-- `pnpm download-files` — Download turn detector ONNX model files (~460MB)
-- `pnpm build` — Vite SSR build for production
+- `bun dev` — Build client + run LiveKit server + token-server + agent together (use this for development)
+- `bun run dev:agent` — Run agent only (assumes LiveKit server already running)
+- `bun run client` — Run token server + LiveKit server only (no agent)
+- `bun run build:client` — Build frontend to `dist/client/`
+- `bun run build:livekit` — Compile LiveKit server Go binary to `dist/livekit-server`
+- `bun run download-files` — Download turn detector ONNX model files (~460MB)
 
 ## Anthropic + LiveKit OpenAI Plugin Compatibility
 
@@ -75,7 +95,7 @@ There is no native `@livekit/agents-plugin-anthropic` for Node.js. We use `@live
 Anthropic rejects `tools: []` while OpenAI accepts it. The agent must always define at least one tool. That's why `get_time` and `set_reminder` exist in `agent.ts` — removing all tools will cause 400 errors.
 
 ### 2. Tool call ID format (patched)
-LiveKit's voice pipeline generates tool call IDs like `item_abc123/fnc_0` with a `/` separator. Anthropic requires IDs matching `^[a-zA-Z0-9_-]+` (no slashes). Fixed via `pnpm patch @livekit/agents` which changes `/` to `-`. The patch is at `patches/@livekit__agents.patch` and auto-applies on `pnpm install`.
+LiveKit's voice pipeline generates tool call IDs like `item_abc123/fnc_0` with a `/` separator. Anthropic requires IDs matching `^[a-zA-Z0-9_-]+` (no slashes). Fixed via patch which changes `/` to `-`. The patch is at `patches/@livekit__agents.patch` and auto-applies on `bun install`.
 
 ### 3. Event name types
 Session events require the `voice.AgentSessionEventTypes` enum, not raw strings. E.g., `session.on(Events.Error, ...)` not `session.on('error', ...)`.
@@ -108,4 +128,8 @@ The agent outputs comprehensive timestamped logs for every pipeline stage:
 
 ## TypeScript
 
-Strict mode with `exactOptionalPropertyTypes`. Use `?? ''` for optional env vars (not just `!`). The `ctx.proc.userData.vad` is `unknown` and must be cast: `ctx.proc.userData.vad as silero.VAD`.
+Two separate tsconfig files:
+- `tsconfig.json` — Backend (Node.js/Bun APIs, strict mode with `exactOptionalPropertyTypes`)
+- `client/tsconfig.json` — Frontend (DOM types, no Node.js types)
+
+Use `?? ''` for optional env vars (not just `!`). The `ctx.proc.userData.vad` is `unknown` and must be cast: `ctx.proc.userData.vad as silero.VAD`.
