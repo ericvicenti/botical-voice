@@ -10,7 +10,7 @@ const API_SECRET = process.env.LIVEKIT_API_SECRET ?? 'secret';
 // Internal URL for dispatch (always localhost since LiveKit runs on the same machine)
 const LIVEKIT_HOST = process.env.LIVEKIT_HOST ?? 'http://localhost:7880';
 // Public URL returned to clients (browsers connect here for WebRTC)
-const LIVEKIT_URL = process.env.LIVEKIT_URL ?? 'ws://localhost:7880';
+const LIVEKIT_URL = process.env.LIVEKIT_PUBLIC_URL ?? process.env.LIVEKIT_URL ?? 'ws://localhost:7880';
 
 const DIST_CLIENT = join(import.meta.dirname, '../dist/client');
 
