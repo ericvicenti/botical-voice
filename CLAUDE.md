@@ -76,7 +76,7 @@ Audio flows Browser <-> LiveKit Server (local) <-> Agent. The token server only 
 - `src/livekit-server.ts` — LiveKit server child process manager. Handles starting, readiness detection, and graceful shutdown.
 - `client/` — Frontend TypeScript source (see Frontend section above).
 - `livekit-server/` — Vendored LiveKit Go source (git subtree).
-- `patches/@livekit__agents.patch` — Patch fixing Anthropic tool call ID compatibility (see below).
+- `patches/@livekit%2Fagents@1.0.47.patch` — Patch fixing Anthropic tool call ID and whitespace compatibility (see below).
 
 ### Scripts
 
@@ -95,7 +95,7 @@ There is no native `@livekit/agents-plugin-anthropic` for Node.js. We use `@live
 Anthropic rejects `tools: []` while OpenAI accepts it. The agent must always define at least one tool. That's why `get_time` and `set_reminder` exist in `agent.ts` — removing all tools will cause 400 errors.
 
 ### 2. Tool call ID format (patched)
-LiveKit's voice pipeline generates tool call IDs like `item_abc123/fnc_0` with a `/` separator. Anthropic requires IDs matching `^[a-zA-Z0-9_-]+` (no slashes). Fixed via patch which changes `/` to `-`. The patch is at `patches/@livekit__agents.patch` and auto-applies on `bun install`.
+LiveKit's voice pipeline generates tool call IDs like `item_abc123/fnc_0` with a `/` separator. Anthropic requires IDs matching `^[a-zA-Z0-9_-]+$` (no slashes or other special characters). Fixed via patch which changes `/` to `-` and sanitizes all callId values with `.replace(/[^a-zA-Z0-9_-]/g, '')` both at generation time and at the API boundary. The patch is at `patches/@livekit%2Fagents@1.0.47.patch` and auto-applies on `bun install`. Patches require the `bun patch` / `bun patch --commit` workflow to generate — manually written patch files won't be applied.
 
 ### 3. Event name types
 Session events require the `voice.AgentSessionEventTypes` enum, not raw strings. E.g., `session.on(Events.Error, ...)` not `session.on('error', ...)`.

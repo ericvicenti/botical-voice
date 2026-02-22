@@ -14,8 +14,8 @@
   },
   "license": "ISC",
   "patchedDependencies": {
-    "@livekit/agents": "patches/@livekit__agents.patch",
-    "@livekit/agents-plugin-cartesia": "patches/@livekit__agents-plugin-cartesia.patch"
+    "@livekit/agents@1.0.47": "patches/@livekit%2Fagents@1.0.47.patch",
+    "@livekit/agents-plugin-cartesia@1.0.47": "patches/@livekit%2Fagents-plugin-cartesia@1.0.47.patch"
   },
   "dependencies": {
     "@livekit/agents": "^1.0.47",

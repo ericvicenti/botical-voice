@@ -21,6 +21,10 @@
       },
     },
   },
+  "patchedDependencies": {
+    "@livekit/agents@1.0.47": "patches/@livekit%2Fagents@1.0.47.patch",
+    "@livekit/agents-plugin-cartesia@1.0.47": "patches/@livekit%2Fagents-plugin-cartesia@1.0.47.patch",
+  },
   "packages": {
     "@bufbuild/protobuf": ["@bufbuild/protobuf@1.10.1", "", {}, "sha512-wJ8ReQbHxsAfXhrf9ixl0aYbZorRuOWpBNzm8pL8ftmSxQx/wnJD5Eg861NwJU/czy2VXFIebCeZnZrI9rktIQ=="],
 

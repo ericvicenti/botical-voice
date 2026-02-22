@@ -1,0 +1,157 @@
+diff --git a/dist/llm/provider_format/openai.cjs b/dist/llm/provider_format/openai.cjs
+index 5ee80def26f4da8de18132a47904a4cd56b2b095..1ae033cdfcc4f9c3783cde1d3c0adae96d48c7ee 100644
+--- a/dist/llm/provider_format/openai.cjs
++++ b/dist/llm/provider_format/openai.cjs
+@@ -33,7 +33,7 @@ async function toChatCtx(chatCtx, injectDummyUserMessage = true) {
+     const toolCalls = group.toolCalls.map((toolCall) => {
+       const tc = {
+         type: "function",
+-        id: toolCall.callId,
++        id: (toolCall.callId || "").replace(/[^a-zA-Z0-9_-]/g, ""),
+         function: { name: toolCall.name, arguments: toolCall.args }
+       };
+       const googleExtra = getGoogleExtra(toolCall);
+@@ -66,6 +66,7 @@ async function toChatItem(item) {
+         throw new Error(`Unsupported content type: ${content.type}`);
+       }
+     }
++    if (item.role === "assistant") textContent = textContent.trimEnd();
+     const result = { role: item.role };
+     if (listContent.length === 0) {
+       result.content = textContent;
+@@ -78,7 +79,7 @@ async function toChatItem(item) {
+     return result;
+   } else if (item.type === "function_call") {
+     const tc = {
+-      id: item.callId,
++      id: (item.callId || "").replace(/[^a-zA-Z0-9_-]/g, ""),
+       type: "function",
+       function: { name: item.name, arguments: item.args }
+     };
+@@ -93,7 +94,7 @@ async function toChatItem(item) {
+   } else if (item.type === "function_call_output") {
+     return {
+       role: "tool",
+-      tool_call_id: item.callId,
++      tool_call_id: (item.callId || "").replace(/[^a-zA-Z0-9_-]/g, ""),
+       content: item.output
+     };
+   }
+diff --git a/dist/llm/provider_format/openai.js b/dist/llm/provider_format/openai.js
+index 81be1b043409251b431468e4c30b9f306eb78bbc..58e0edf6021b674d9d83247d8011af8c2c8b1515 100644
+--- a/dist/llm/provider_format/openai.js
++++ b/dist/llm/provider_format/openai.js
+@@ -9,7 +9,7 @@ async function toChatCtx(chatCtx, injectDummyUserMessage = true) {
+     const toolCalls = group.toolCalls.map((toolCall) => {
+       const tc = {
+         type: "function",
+-        id: toolCall.callId,
++        id: (toolCall.callId || "").replace(/[^a-zA-Z0-9_-]/g, ""),
+         function: { name: toolCall.name, arguments: toolCall.args }
+       };
+       const googleExtra = getGoogleExtra(toolCall);
+@@ -42,6 +42,7 @@ async function toChatItem(item) {
+         throw new Error(`Unsupported content type: ${content.type}`);
+       }
+     }
++    if (item.role === "assistant") textContent = textContent.trimEnd();
+     const result = { role: item.role };
+     if (listContent.length === 0) {
+       result.content = textContent;
+@@ -54,7 +55,7 @@ async function toChatItem(item) {
+     return result;
+   } else if (item.type === "function_call") {
+     const tc = {
+-      id: item.callId,
++      id: (item.callId || "").replace(/[^a-zA-Z0-9_-]/g, ""),
+       type: "function",
+       function: { name: item.name, arguments: item.args }
+     };
+@@ -69,7 +70,7 @@ async function toChatItem(item) {
+   } else if (item.type === "function_call_output") {
+     return {
+       role: "tool",
+-      tool_call_id: item.callId,
++      tool_call_id: (item.callId || "").replace(/[^a-zA-Z0-9_-]/g, ""),
+       content: item.output
+     };
+   }
+diff --git a/dist/voice/generation.cjs b/dist/voice/generation.cjs
+index 89d534d0ae27b33b0b7acdd62a98c2868af5c5a5..f9836f4c8985b2b14ab0d79495a2d375ee179945 100644
+--- a/dist/voice/generation.cjs
++++ b/dist/voice/generation.cjs
+@@ -353,7 +353,7 @@ function performLLMInference(node, chatCtx, toolCtx, modelSettings, controller)
+             for (const tool of chunk.delta.toolCalls) {
+               if (tool.type !== "function_call") continue;
+               const toolCall = import_chat_context.FunctionCall.create({
+-                callId: `${data.id}/fnc_${data.generatedToolCalls.length}`,
++                callId: `${data.id}-fnc_${data.generatedToolCalls.length}`.replace(/[^a-zA-Z0-9_-]/g, ""),
+                 name: tool.name,
+                 args: tool.args,
+                 // Preserve thought signature for Gemini 3+ thinking mode
+diff --git a/dist/voice/generation.js b/dist/voice/generation.js
+index 014389c90e6ec91b30fe65771d966ed220c5b8c0..6340ab760025fceb0c5baa630eee2be7ab96b5b3 100644
+--- a/dist/voice/generation.js
++++ b/dist/voice/generation.js
+@@ -334,7 +334,7 @@ function performLLMInference(node, chatCtx, toolCtx, modelSettings, controller)
+             for (const tool of chunk.delta.toolCalls) {
+               if (tool.type !== "function_call") continue;
+               const toolCall = FunctionCall.create({
+-                callId: `${data.id}/fnc_${data.generatedToolCalls.length}`,
++                callId: `${data.id}-fnc_${data.generatedToolCalls.length}`.replace(/[^a-zA-Z0-9_-]/g, ""),
+                 name: tool.name,
+                 args: tool.args,
+                 // Preserve thought signature for Gemini 3+ thinking mode
+diff --git a/src/llm/provider_format/openai.ts b/src/llm/provider_format/openai.ts
+index 6341f612144e8e87633a025dbf602c883a9dec77..8a8dff7beadc8159e1b1e5ed1a3f7d4783f5ad65 100644
+--- a/src/llm/provider_format/openai.ts
++++ b/src/llm/provider_format/openai.ts
+@@ -20,7 +20,7 @@ export async function toChatCtx(chatCtx: ChatContext, injectDummyUserMessage: bo
+     const toolCalls = group.toolCalls.map((toolCall) => {
+       const tc: Record<string, any> = {
+         type: 'function',
+-        id: toolCall.callId,
++        id: (toolCall.callId || '').replace(/[^a-zA-Z0-9_-]/g, ''),
+         function: { name: toolCall.name, arguments: toolCall.args },
+       };
+ 
+@@ -62,6 +62,8 @@ async function toChatItem(item: ChatItem) {
+       }
+     }
+ 
++    // Anthropic rejects assistant messages with trailing whitespace
++    if (item.role === 'assistant') textContent = textContent.trimEnd();
+     const result: Record<string, any> = { role: item.role };
+     if (listContent.length === 0) {
+       result.content = textContent;
+@@ -75,7 +77,7 @@ async function toChatItem(item: ChatItem) {
+     return result;
+   } else if (item.type === 'function_call') {
+     const tc: Record<string, any> = {
+-      id: item.callId,
++      id: (item.callId || '').replace(/[^a-zA-Z0-9_-]/g, ''),
+       type: 'function',
+       function: { name: item.name, arguments: item.args },
+     };
+@@ -93,7 +95,7 @@ async function toChatItem(item: ChatItem) {
+   } else if (item.type === 'function_call_output') {
+     return {
+       role: 'tool',
+-      tool_call_id: item.callId,
++      tool_call_id: (item.callId || '').replace(/[^a-zA-Z0-9_-]/g, ''),
+       content: item.output,
+     };
+   }
+diff --git a/src/voice/generation.ts b/src/voice/generation.ts
+index 1f141ab37249f28fdce9977ddae8aea9373af840..5c1c464b37406f7c30ce03cc200a241b6c159981 100644
+--- a/src/voice/generation.ts
++++ b/src/voice/generation.ts
+@@ -469,7 +469,7 @@ export function performLLMInference(
+               if (tool.type !== 'function_call') continue;
+ 
+               const toolCall = FunctionCall.create({
+-                callId: `${data.id}/fnc_${data.generatedToolCalls.length}`,
++                callId: `${data.id}-fnc_${data.generatedToolCalls.length}`.replace(/[^a-zA-Z0-9_-]/g, ''),
+                 name: tool.name,
+                 args: tool.args,
+                 // Preserve thought signature for Gemini 3+ thinking mode
