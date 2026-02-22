@@ -1,52 +1,69 @@
 # Botical3
 
-Real-time voice assistant built with LiveKit Agents (TypeScript/Node.js).
+Real-time voice assistant built with LiveKit Agents (TypeScript/Node.js), with a self-hosted LiveKit server.
 
 ## Quick Start
 
 ```bash
 pnpm install
 pnpm download-files   # downloads ~460MB turn detector ONNX models (first time only)
-pnpm dev              # runs token-server + agent together
+pnpm dev              # starts LiveKit server + token-server + agent
 ```
 
 Open http://localhost:3000, click Connect, and speak.
+
+## Prerequisites
+
+- **Go 1.24+** — Managed automatically via [mise](https://mise.jdx.dev/) + [direnv](https://direnv.net/). Just `cd` into the project directory and Go will be available. If not already installed: `brew install mise direnv`.
 
 ## Required Environment Variables
 
 Copy `.env.example` to `.env` and fill in:
 
-- `LIVEKIT_URL` / `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` — LiveKit Cloud project credentials (or local dev server)
 - `ANTHROPIC_API_KEY` — Anthropic API key for Claude LLM
 - `DEEPGRAM_API_KEY` — Deepgram API key for streaming STT
 - `CARTESIA_API_KEY` — Cartesia API key for TTS
 
+LiveKit credentials are not needed — the server runs locally with hardcoded dev credentials (`devkey`/`secret`).
+
 ## Architecture
+
+### LiveKit Server (Self-Hosted)
+
+The LiveKit WebRTC server source is vendored at `livekit-server/` via `git subtree` from [github.com/livekit/livekit](https://github.com/livekit/livekit). The token server starts it automatically as a child process on port 7880.
+
+- **Dev mode**: Uses `go run` for fast iteration — no build step needed
+- **Pre-built binary**: If `dist/livekit-server` exists (from `pnpm build:livekit`), uses that instead
+- **Port detection**: Skips starting if port 7880 is already in use
+- **Forking**: Edit Go source in `livekit-server/` directly. Pull upstream updates with: `git subtree pull --prefix=livekit-server --squash https://github.com/livekit/livekit.git master`
 
 ### Pipeline
 
-Browser mic -> LiveKit Cloud (WebSocket) -> Agent:
+Browser mic -> LiveKit Server (localhost:7880, WebSocket) -> Agent:
 1. **VAD**: Silero (voice activity detection, runs locally)
 2. **STT**: Deepgram Nova-3 (streaming — only streaming STT with a LiveKit Node.js plugin)
 3. **Turn Detection**: LiveKit Multilingual Model (Qwen2.5-0.5B ONNX, runs locally, dynamically adjusts endpointing delay 0.5s-3.0s)
-4. **LLM**: Anthropic Claude Haiku 4.5 via OpenAI-compatible endpoint
+4. **LLM**: Anthropic Claude Sonnet 4.6 via OpenAI-compatible endpoint
 5. **TTS**: Cartesia Sonic (streaming)
 
-Audio flows Browser <-> LiveKit Cloud <-> Agent. The token server only handles HTTP (token generation, serving the client HTML).
+Audio flows Browser <-> LiveKit Server (local) <-> Agent. The token server only handles HTTP (token generation, serving the client HTML).
 
 ### Key Files
 
 - `src/main.ts` — Agent entry point. `defineAgent({ prewarm, entry })` loads VAD model, creates the voice session with all providers, wires up comprehensive logging for every pipeline stage.
 - `src/agent.ts` — `BotAgent` class extending `voice.Agent`. Contains system instructions and tools (`get_time`, `set_reminder`). At least one tool must be defined (see Anthropic quirks below).
-- `src/token-server.ts` — HTTP server on port 3000. Serves the client HTML at `/`, generates LiveKit tokens at `/api/token`, and creates explicit agent dispatches via `AgentDispatchClient`.
+- `src/token-server.ts` — HTTP server on port 3000. Starts LiveKit server, serves the client HTML at `/`, generates LiveKit tokens at `/api/token`, and creates explicit agent dispatches via `AgentDispatchClient`.
+- `src/livekit-server.ts` — LiveKit server child process manager. Handles starting, readiness detection, and graceful shutdown.
 - `client/index.html` — Browser client using LiveKit SDK from CDN. Has comprehensive debug logging in a transcript panel (color-coded: yellow=debug, red=error, blue=user speech, green=agent speech).
+- `livekit-server/` — Vendored LiveKit Go source (git subtree).
 - `patches/@livekit__agents.patch` — pnpm patch fixing Anthropic tool call ID compatibility (see below).
 
 ### Scripts
 
-- `pnpm dev` — Run token-server and agent together (use this for development)
-- `pnpm dev:agent` — Run agent only
-- `pnpm client` — Run token server only
+- `pnpm dev` — Run LiveKit server + token-server + agent together (use this for development)
+- `pnpm dev:agent` — Run agent only (assumes LiveKit server already running)
+- `pnpm client` — Run token server + LiveKit server only (no agent)
+- `pnpm build:livekit` — Compile LiveKit server Go binary to `dist/livekit-server`
 - `pnpm download-files` — Download turn detector ONNX model files (~460MB)
 - `pnpm build` — Vite SSR build for production
 
@@ -66,15 +83,16 @@ Session events require the `voice.AgentSessionEventTypes` enum, not raw strings.
 ## Agent Dispatch
 
 The agent must be explicitly dispatched to a room. This is handled automatically:
-1. Agent registers with `agentName: 'botical'` in `ServerOptions` (`main.ts:180`)
+1. Agent registers with `agentName: 'botical'` in `ServerOptions` (`main.ts`)
 2. When a user requests a token, the token server also calls `dispatchClient.createDispatch(room, 'botical')` (`token-server.ts`)
-3. LiveKit Cloud sends the job to the registered worker, triggering the `entry` callback
+3. LiveKit server sends the job to the registered worker, triggering the `entry` callback
 
 Without explicit dispatch, the agent worker registers but never receives jobs.
 
 ## Logging
 
 The agent outputs comprehensive timestamped logs for every pipeline stage:
+- `[livekit]` — LiveKit server output (prefixed from child process)
 - `[stt]` — Speech-to-text metrics (audio duration, streaming status)
 - `[llm]` — LLM metrics (TTFT, tokens/sec, prompt/completion tokens)
 - `[tts]` — Text-to-speech metrics (TTFB, audio duration, character count)

@@ -7,6 +7,7 @@
     "dev": "trap 'kill 0' EXIT; tsx src/token-server.ts & tsx src/main.ts dev",
     "dev:agent": "tsx src/main.ts dev",
     "build": "vite build",
+    "build:livekit": "cd livekit-server && go build -o ../dist/livekit-server ./cmd/server",
     "start": "node dist/main.js start",
     "download-files": "tsx src/main.ts download-files",
     "client": "tsx src/token-server.ts"

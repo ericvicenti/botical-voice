@@ -3,14 +3,13 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { AccessToken, AgentDispatchClient } from 'livekit-server-sdk';
+import { startLiveKit } from './livekit-server.js';
 
 const PORT = 3000;
-const LIVEKIT_URL = process.env.LIVEKIT_URL ?? 'ws://localhost:7880';
-const API_KEY = process.env.LIVEKIT_API_KEY ?? 'devkey';
-const API_SECRET = process.env.LIVEKIT_API_SECRET ?? 'secret';
-
-// Convert wss:// URL to https:// for REST API calls
-const LIVEKIT_HOST = LIVEKIT_URL.replace(/^wss?:\/\//, 'https://');
+const LIVEKIT_URL = 'ws://localhost:7880';
+const API_KEY = 'devkey';
+const API_SECRET = 'secret';
+const LIVEKIT_HOST = 'http://localhost:7880';
 
 function ts(): string {
   return new Date().toISOString().slice(11, 23);
@@ -23,6 +22,9 @@ async function generateToken(identity: string, roomName: string): Promise<string
   at.addGrant({ roomJoin: true, room: roomName });
   return await at.toJwt();
 }
+
+// Start LiveKit server before accepting requests
+await startLiveKit();
 
 const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', `http://localhost:${PORT}`);
@@ -96,8 +98,6 @@ const server = createServer(async (req, res) => {
 server.listen(PORT, () => {
   console.log(`[${ts()}] [server] Client: http://localhost:${PORT}`);
   console.log(`[${ts()}] [server] Token API: http://localhost:${PORT}/api/token`);
-  console.log(`[${ts()}] [server] LiveKit URL: ${LIVEKIT_URL}`);
-  console.log(`[${ts()}] [server] LiveKit Host (REST): ${LIVEKIT_HOST}`);
-  console.log(`[${ts()}] [server] API Key: ${API_KEY.slice(0, 8)}...`);
+  console.log(`[${ts()}] [server] LiveKit: ${LIVEKIT_URL}`);
   console.log(`[${ts()}] [server] Agent dispatch: enabled (agent name: "botical")`);
 });

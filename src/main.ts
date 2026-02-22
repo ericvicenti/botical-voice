@@ -200,4 +200,10 @@ export default defineAgent({
   },
 });
 
-cli.runApp(new ServerOptions({ agent: import.meta.filename, agentName: 'botical' }));
+cli.runApp(new ServerOptions({
+  agent: import.meta.filename,
+  agentName: 'botical',
+  wsURL: 'ws://localhost:7880',
+  apiKey: 'devkey',
+  apiSecret: 'secret',
+}));
