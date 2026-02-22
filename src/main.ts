@@ -202,7 +202,7 @@ export default defineAgent({
 cli.runApp(new ServerOptions({
   agent: import.meta.filename,
   agentName: 'botical',
-  wsURL: 'ws://localhost:7880',
-  apiKey: 'devkey',
-  apiSecret: 'secret',
+  wsURL: process.env.LIVEKIT_WS_URL ?? 'ws://localhost:7880',
+  apiKey: process.env.LIVEKIT_API_KEY ?? 'devkey',
+  apiSecret: process.env.LIVEKIT_API_SECRET ?? 'secret',
 }));
