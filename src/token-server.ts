@@ -39,8 +39,10 @@ async function generateToken(identity: string, roomName: string): Promise<string
   return await at.toJwt();
 }
 
-// Start LiveKit server before accepting requests
-await startLiveKit();
+// Start LiveKit server before accepting requests (skip if managed externally, e.g. by systemd)
+if (!process.env.LIVEKIT_EXTERNAL) {
+  await startLiveKit();
+}
 
 const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', `http://localhost:${PORT}`);
