@@ -24,8 +24,13 @@ export default defineAgent({
   },
   entry: async (ctx) => {
     console.log(`[${ts()}] [entry] job received, connecting to room...`);
-    await ctx.connect();
-    console.log(`[${ts()}] [entry] connected to room: ${ctx.room.name}`);
+    try {
+      await ctx.connect();
+      console.log(`[${ts()}] [entry] connected to room: ${ctx.room.name}`);
+    } catch (err) {
+      console.error(`[${ts()}] [entry] FAILED to connect to room:`, err);
+      throw err;
+    }
 
     // Log existing participants
     for (const [, p] of ctx.room.remoteParticipants) {
