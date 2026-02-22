@@ -1,6 +1,7 @@
 import { Room, RoomEvent, Track } from 'livekit-client';
 import { debug } from './debug';
 import { addUserMessage, addAgentMessage, addToolCard, addInterimMessage, finalizeSegment } from './chat';
+import { handleCostUpdate, resetCosts } from './costs';
 import { updateVoiceState, setUserSpeaking, setVoiceEnabled, resetVoiceState } from './voice-state';
 
 let room: Room | null = null;
@@ -144,6 +145,7 @@ export async function connect(): Promise<void> {
       voiceEnabled = false;
       setVoiceEnabled(false);
       resetVoiceState();
+      resetCosts();
       room = null;
       audioElements = [];
 
@@ -151,7 +153,7 @@ export async function connect(): Promise<void> {
       reconnectTimer = setTimeout(connect, 2000);
     });
 
-    // Data messages (tool calls from agent)
+    // Data messages (tool calls + cost updates from agent)
     room.on(RoomEvent.DataReceived, (data, participant, _kind, topic) => {
       debug(`Data received: topic=${topic}, from=${participant?.identity ?? 'server'}, ${data.byteLength} bytes`);
       if (topic === 'botical.events') {
@@ -164,6 +166,13 @@ export async function connect(): Promise<void> {
           }
         } catch (err) {
           debug(`Failed to parse event data: ${(err as Error).message}`, 'error');
+        }
+      } else if (topic === 'botical.costs') {
+        try {
+          const msg = JSON.parse(new TextDecoder().decode(data));
+          handleCostUpdate(msg);
+        } catch (err) {
+          debug(`Failed to parse cost data: ${(err as Error).message}`, 'error');
         }
       }
     });

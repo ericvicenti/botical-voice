@@ -35,6 +35,56 @@ body {
   background: #1b3a1b;
   color: #4CAF50;
 }
+/* --- Cost display --- */
+.cost-display {
+  display: none;
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+}
+.cost-display.visible { display: block; }
+.cost-total {
+  font-size: 0.75rem;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #1a1a2e;
+  color: #8888cc;
+  border: 1px solid #2a2a4a;
+  transition: all 0.15s;
+}
+.cost-display:hover .cost-total {
+  border-color: #4a4a6a;
+  color: #aaaaee;
+}
+.cost-breakdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #161622;
+  border: 1px solid #2a2a3a;
+  border-radius: 8px;
+  padding: 8px 12px;
+  min-width: 140px;
+  z-index: 50;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.72rem;
+}
+.cost-breakdown.open { display: block; }
+.cost-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 3px 0;
+  color: #999;
+}
+.cost-label {
+  color: #666;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+}
+
 .header-btn {
   background: none;
   border: 1px solid #333;

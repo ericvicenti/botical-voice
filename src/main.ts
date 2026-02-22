@@ -5,6 +5,7 @@ import * as cartesia from '@livekit/agents-plugin-cartesia';
 import * as silero from '@livekit/agents-plugin-silero';
 import * as livekit from '@livekit/agents-plugin-livekit';
 import { BotAgent } from './agent.js';
+import { CostTracker, formatCost, type CostUpdate } from './costs.js';
 
 const Events = voice.AgentSessionEventTypes;
 
@@ -33,6 +34,20 @@ export default defineAgent({
     }
 
     const usageCollector = new metrics.UsageCollector();
+    const costTracker = new CostTracker();
+
+    function publishCost(service: CostUpdate['service'], cost: number): void {
+      const update: CostUpdate = {
+        type: 'cost_update',
+        service,
+        cost,
+        session: costTracker.getSession(),
+      };
+      ctx.room.localParticipant?.publishData(
+        new TextEncoder().encode(JSON.stringify(update)),
+        { reliable: true, topic: 'botical.costs' }
+      );
+    }
 
     const session = new voice.AgentSession({
       vad: ctx.proc.userData.vad as silero.VAD,
@@ -70,22 +85,30 @@ export default defineAgent({
       usageCollector.collect(m);
 
       if (m.type === 'stt_metrics') {
+        const cost = costTracker.addStt(m.audioDurationMs);
         console.log(
           `[${ts()}] [stt] audio: ${fmtMs(m.audioDurationMs)}, ` +
-          `duration: ${fmtMs(m.durationMs)}, streamed: ${m.streamed}`
+          `duration: ${fmtMs(m.durationMs)}, streamed: ${m.streamed}, cost: ${formatCost(cost)}`
         );
+        publishCost('stt', cost);
       } else if (m.type === 'llm_metrics') {
+        const cached = (m as Record<string, unknown>).cachedTokens as number | undefined;
+        const cost = costTracker.addLlm(m.promptTokens, m.completionTokens, cached ?? 0);
         console.log(
           `[${ts()}] [llm] TTFT: ${fmtMs(m.ttftMs)}, duration: ${fmtMs(m.durationMs)}, ` +
-          `tokens: ${m.promptTokens}→${m.completionTokens} (${Math.round(m.tokensPerSecond)} tok/s)` +
+          `tokens: ${m.promptTokens}→${m.completionTokens} (${Math.round(m.tokensPerSecond)} tok/s), ` +
+          `cost: ${formatCost(cost)}` +
           (m.cancelled ? ' [CANCELLED]' : '')
         );
+        publishCost('llm', cost);
       } else if (m.type === 'tts_metrics') {
+        const cost = costTracker.addTts(m.charactersCount);
         console.log(
           `[${ts()}] [tts] TTFB: ${fmtMs(m.ttfbMs)}, duration: ${fmtMs(m.durationMs)}, ` +
-          `audio: ${fmtMs(m.audioDurationMs)}, chars: ${m.charactersCount}` +
+          `audio: ${fmtMs(m.audioDurationMs)}, chars: ${m.charactersCount}, cost: ${formatCost(cost)}` +
           (m.cancelled ? ' [CANCELLED]' : '')
         );
+        publishCost('tts', cost);
       } else if (m.type === 'eou_metrics') {
         console.log(
           `[${ts()}] [eou] utterance delay: ${fmtMs(m.endOfUtteranceDelayMs)}, ` +
@@ -165,6 +188,11 @@ export default defineAgent({
       const usage = usageCollector.getSummary();
       console.log(`[${ts()}] [usage] LLM prompt: ${usage.llmPromptTokens} tokens (${usage.llmPromptCachedTokens} cached), completion: ${usage.llmCompletionTokens} tokens`);
       console.log(`[${ts()}] [usage] TTS: ${usage.ttsCharactersCount} chars, STT audio: ${fmtMs(usage.sttAudioDurationMs)}`);
+      const costs = costTracker.getSession();
+      console.log(
+        `[${ts()}] [costs] session total: ${formatCost(costs.total)} ` +
+        `(STT: ${formatCost(costs.stt)}, LLM: ${formatCost(costs.llm)}, TTS: ${formatCost(costs.tts)})`
+      );
     });
 
     // --- Room events ---
