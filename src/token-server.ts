@@ -65,6 +65,30 @@ const server = createServer(async (req, res) => {
     return;
   }
 
+  if (url.pathname.startsWith('/assets/')) {
+    const filename = url.pathname.slice('/assets/'.length);
+    // Only allow simple filenames (no path traversal)
+    if (filename && !filename.includes('/') && !filename.includes('..')) {
+      try {
+        const data = await readFile(join(import.meta.dirname, '../assets', filename));
+        const ext = filename.split('.').pop()?.toLowerCase();
+        const mimeTypes: Record<string, string> = {
+          wav: 'audio/wav',
+          mp3: 'audio/mpeg',
+          ogg: 'audio/ogg',
+          png: 'image/png',
+          jpg: 'image/jpeg',
+          svg: 'image/svg+xml',
+        };
+        res.writeHead(200, { 'Content-Type': mimeTypes[ext ?? ''] ?? 'application/octet-stream' });
+        res.end(data);
+        return;
+      } catch {
+        // fall through to 404
+      }
+    }
+  }
+
   res.writeHead(404);
   res.end('Not found');
 });

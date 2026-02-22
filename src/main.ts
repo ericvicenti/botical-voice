@@ -131,6 +131,21 @@ export default defineAgent({
       for (const fn of ev.functionCalls) {
         console.log(`[${ts()}] [tool] called: ${fn.name}(${fn.args})`);
       }
+
+      // Forward tool call results to client
+      const payload = JSON.stringify({
+        type: 'tool_calls',
+        tools: ev.functionCalls.map((fn, i) => ({
+          name: fn.name,
+          args: fn.args,
+          output: ev.functionCallOutputs[i]?.output ?? '',
+          isError: ev.functionCallOutputs[i]?.isError ?? false,
+        })),
+      });
+      ctx.room.localParticipant?.publishData(
+        new TextEncoder().encode(payload),
+        { reliable: true, topic: 'botical.events' }
+      );
     });
 
     // --- Errors and close ---

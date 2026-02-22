@@ -3,249 +3,715 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Botical Voice Agent</title>
+  <title>Botical</title>
   <script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #111;
-      color: #eee;
+      background: #0a0a0a;
+      color: #e0e0e0;
       height: 100vh;
       display: flex;
       flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* --- Header --- */
+    .header {
+      display: flex;
       align-items: center;
-      justify-content: center;
-      gap: 24px;
+      padding: 12px 16px;
+      border-bottom: 1px solid #1e1e1e;
+      gap: 12px;
+      flex-shrink: 0;
     }
-    h1 { font-size: 1.5rem; font-weight: 400; opacity: 0.7; }
-    #status {
+    .header-title {
       font-size: 1.1rem;
-      opacity: 0.5;
-      min-height: 1.4em;
+      font-weight: 600;
+      margin-right: auto;
     }
-    #agent-state {
-      font-size: 0.9rem;
-      opacity: 0.4;
-      min-height: 1.2em;
-    }
-    button {
-      padding: 16px 48px;
-      font-size: 1.1rem;
-      border: none;
+    .status-badge {
+      font-size: 0.75rem;
+      padding: 3px 10px;
       border-radius: 999px;
+      background: #222;
+      color: #888;
+    }
+    .status-badge.connected {
+      background: #1b3a1b;
+      color: #4CAF50;
+    }
+    .header-btn {
+      background: none;
+      border: 1px solid #333;
+      color: #ccc;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 0.8rem;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.15s;
     }
-    button:disabled { opacity: 0.3; cursor: not-allowed; }
-    #connect-btn {
-      background: #4CAF50;
-      color: white;
+    .header-btn:hover { border-color: #555; color: #fff; }
+
+    /* --- Chat area --- */
+    .chat-container {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
     }
-    #connect-btn:hover:not(:disabled) { background: #45a049; }
-    #disconnect-btn {
-      background: #f44336;
-      color: white;
-    }
-    #disconnect-btn:hover:not(:disabled) { background: #da190b; }
-    .controls { display: flex; gap: 12px; }
-    #transcript {
-      width: 90%;
-      max-width: 600px;
-      height: 300px;
+    .chat-messages {
+      height: 100%;
       overflow-y: auto;
       padding: 16px;
-      background: #1a1a1a;
-      border-radius: 12px;
-      font-size: 0.85rem;
-      line-height: 1.5;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
     }
-    .msg-user { color: #81D4FA; }
-    .msg-agent { color: #A5D6A7; }
-    .msg-system { color: #666; font-style: italic; }
-    .msg-debug { color: #FFD54F; font-size: 0.8rem; }
-    .msg-error { color: #EF5350; }
+
+    /* --- Messages --- */
+    .msg {
+      max-width: 80%;
+      padding: 10px 14px;
+      border-radius: 16px;
+      font-size: 0.9rem;
+      line-height: 1.45;
+      word-wrap: break-word;
+      animation: fadeIn 0.15s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .msg.user {
+      align-self: flex-end;
+      background: #1a4a8a;
+      color: #e8f0fe;
+      border-bottom-right-radius: 4px;
+    }
+    .msg.agent {
+      align-self: flex-start;
+      background: #1e1e1e;
+      color: #e0e0e0;
+      border-bottom-left-radius: 4px;
+    }
+    .msg.interim {
+      opacity: 0.5;
+    }
+    .msg.system {
+      align-self: center;
+      background: none;
+      color: #555;
+      font-size: 0.8rem;
+      padding: 4px 0;
+    }
+
+    /* --- Thinking indicator --- */
+    .thinking {
+      align-self: flex-start;
+      color: #666;
+      font-size: 0.8rem;
+      padding: 6px 14px;
+      display: none;
+    }
+    .thinking.visible { display: flex; gap: 4px; align-items: center; }
+    .thinking-dots span {
+      display: inline-block;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #666;
+      animation: dot 1.2s infinite;
+    }
+    .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes dot {
+      0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+      40% { opacity: 1; transform: scale(1); }
+    }
+
+    /* --- Tool call cards --- */
+    .tool-card {
+      align-self: flex-start;
+      background: #161622;
+      border: 1px solid #2a2a3a;
+      border-radius: 10px;
+      max-width: 80%;
+      font-size: 0.82rem;
+      animation: fadeIn 0.15s ease;
+      overflow: hidden;
+    }
+    .tool-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .tool-header:hover { background: #1c1c2e; }
+    .tool-icon { font-size: 0.9rem; }
+    .tool-name { font-weight: 500; color: #b0b0d0; }
+    .tool-toggle {
+      margin-left: auto;
+      color: #555;
+      font-size: 0.7rem;
+      transition: transform 0.2s;
+    }
+    .tool-toggle.open { transform: rotate(90deg); }
+    .tool-details {
+      display: none;
+      padding: 0 12px 10px;
+      border-top: 1px solid #222233;
+    }
+    .tool-details.open { display: block; }
+    .tool-label {
+      font-size: 0.7rem;
+      color: #666;
+      text-transform: uppercase;
+      margin-top: 8px;
+      margin-bottom: 2px;
+    }
+    .tool-content {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.78rem;
+      color: #aaa;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .tool-error { color: #f44336; }
+
+    /* --- Input bar --- */
+    .input-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      border-top: 1px solid #1e1e1e;
+      background: #0f0f0f;
+      flex-shrink: 0;
+    }
+    .voice-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: none;
+      background: #1e1e1e;
+      color: #888;
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+    .voice-btn.active {
+      background: #1b3a1b;
+      color: #4CAF50;
+    }
+    .voice-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .text-input {
+      flex: 1;
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 20px;
+      padding: 10px 16px;
+      color: #e0e0e0;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .text-input:focus { border-color: #444; }
+    .text-input:disabled { opacity: 0.3; }
+    .text-input::placeholder { color: #555; }
+    .send-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: none;
+      background: #1a4a8a;
+      color: #fff;
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+    .send-btn:hover { background: #2060b0; }
+    .send-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    /* --- Debug panel --- */
+    .debug-panel {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 400px;
+      height: 100vh;
+      background: #0d0d0d;
+      border-left: 1px solid #1e1e1e;
+      transform: translateX(100%);
+      transition: transform 0.25s ease;
+      display: flex;
+      flex-direction: column;
+      z-index: 100;
+    }
+    .debug-panel.open { transform: translateX(0); }
+    .debug-header {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid #1e1e1e;
+      flex-shrink: 0;
+    }
+    .debug-header span { font-size: 0.85rem; font-weight: 500; color: #888; }
+    .debug-close {
+      margin-left: auto;
+      background: none;
+      border: none;
+      color: #666;
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+    .debug-close:hover { color: #aaa; }
+    .debug-log {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 14px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.75rem;
+      line-height: 1.6;
+    }
+    .debug-entry { color: #FFD54F; }
+    .debug-entry.error { color: #EF5350; }
+    .debug-entry.info { color: #666; }
+
+    /* --- Mobile --- */
+    @media (max-width: 640px) {
+      .msg { max-width: 90%; }
+      .tool-card { max-width: 90%; }
+      .debug-panel { width: 100%; }
+    }
   </style>
 </head>
 <body>
-  <h1>Botical</h1>
-  <div id="status">Ready to connect</div>
-  <div id="agent-state"></div>
-  <div class="controls">
-    <button id="connect-btn">Connect</button>
-    <button id="disconnect-btn" disabled>Disconnect</button>
+  <!-- Header -->
+  <div class="header">
+    <span class="header-title">Botical</span>
+    <span class="status-badge" id="status-badge">Connecting...</span>
+    <button class="header-btn" id="debug-btn">Debug</button>
   </div>
-  <div id="transcript"></div>
+
+  <!-- Chat -->
+  <div class="chat-container">
+    <div class="chat-messages" id="chat">
+      <div class="msg system">Connecting...</div>
+    </div>
+  </div>
+
+  <!-- Input bar -->
+  <div class="input-bar">
+    <button class="voice-btn" id="voice-btn" disabled title="Toggle voice">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+        <line x1="12" y1="19" x2="12" y2="23"/>
+        <line x1="8" y1="23" x2="16" y2="23"/>
+      </svg>
+    </button>
+    <input class="text-input" id="text-input" placeholder="Type a message..." disabled />
+    <button class="send-btn" id="send-btn" disabled title="Send">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Debug panel -->
+  <div class="debug-panel" id="debug-panel">
+    <div class="debug-header">
+      <span>Debug Log</span>
+      <button class="debug-close" id="debug-close">&times;</button>
+    </div>
+    <div class="debug-log" id="debug-log"></div>
+  </div>
 
   <script>
-    // Verify SDK loaded
     if (typeof LivekitClient === 'undefined') {
-      document.getElementById('status').textContent = 'ERROR: LiveKit SDK failed to load';
-      document.getElementById('status').style.color = '#EF5350';
-      throw new Error('LivekitClient not defined — CDN script failed to load');
+      document.getElementById('status-badge').textContent = 'SDK Error';
+      throw new Error('LivekitClient not defined');
     }
 
-    const { Room, RoomEvent, Track, ConnectionState, DisconnectReason } = LivekitClient;
-    console.log('[client] LiveKit SDK loaded, version:', LivekitClient.version);
+    const { Room, RoomEvent, Track, DataPacket_Kind } = LivekitClient;
 
-    const connectBtn = document.getElementById('connect-btn');
-    const disconnectBtn = document.getElementById('disconnect-btn');
-    const statusEl = document.getElementById('status');
-    const agentStateEl = document.getElementById('agent-state');
-    const transcriptEl = document.getElementById('transcript');
+    // DOM refs
+    const statusBadge = document.getElementById('status-badge');
+    const chatEl = document.getElementById('chat');
+    const textInput = document.getElementById('text-input');
+    const sendBtn = document.getElementById('send-btn');
+    const voiceBtn = document.getElementById('voice-btn');
+    const debugBtn = document.getElementById('debug-btn');
+    const debugPanel = document.getElementById('debug-panel');
+    const debugClose = document.getElementById('debug-close');
+    const debugLog = document.getElementById('debug-log');
 
     let room = null;
+    let voiceEnabled = false;
+    let audioElements = [];
+    let reconnectTimer = null;
 
-    function log(text, cls = 'msg-system') {
+    // Preload tool call sound
+    const toolSound = new Audio('/assets/SimpleClicks.wav');
+
+    // --- Active transcription segments (id → DOM element) ---
+    const activeSegments = new Map();
+
+    // --- Debug logging ---
+    function debug(text, level = 'debug') {
       const time = new Date().toLocaleTimeString('en-US', { hour12: false, fractionalSecondDigits: 3 });
       const div = document.createElement('div');
-      div.className = cls;
+      div.className = `debug-entry ${level === 'error' ? 'error' : level === 'info' ? 'info' : ''}`;
       div.textContent = `[${time}] ${text}`;
-      transcriptEl.appendChild(div);
-      transcriptEl.scrollTop = transcriptEl.scrollHeight;
+      debugLog.appendChild(div);
+      debugLog.scrollTop = debugLog.scrollHeight;
       console.log(`[client] ${text}`);
     }
 
-    connectBtn.onclick = async () => {
-      connectBtn.disabled = true;
-      statusEl.textContent = 'Fetching token...';
-      log('Fetching token from /api/token...', 'msg-debug');
+    // --- Chat helpers ---
+    function scrollChat() {
+      // Only auto-scroll if user is near bottom
+      const el = chatEl;
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+      if (atBottom) el.scrollTop = el.scrollHeight;
+    }
+
+    function addSystemMessage(text) {
+      const div = document.createElement('div');
+      div.className = 'msg system';
+      div.textContent = text;
+      chatEl.appendChild(div);
+      scrollChat();
+    }
+
+    function addUserMessage(text) {
+      const div = document.createElement('div');
+      div.className = 'msg user';
+      div.textContent = text;
+      chatEl.appendChild(div);
+      scrollChat();
+    }
+
+    function addAgentMessage(text) {
+      const div = document.createElement('div');
+      div.className = 'msg agent';
+      div.textContent = text;
+      chatEl.appendChild(div);
+      scrollChat();
+    }
+
+    function addToolCard(tools) {
+      for (const tool of tools) {
+        const card = document.createElement('div');
+        card.className = 'tool-card';
+
+        let argsDisplay = '';
+        try {
+          const parsed = JSON.parse(tool.args);
+          argsDisplay = JSON.stringify(parsed, null, 2);
+        } catch {
+          argsDisplay = tool.args || '(none)';
+        }
+
+        card.innerHTML = `
+          <div class="tool-header">
+            <span class="tool-icon">&#9881;</span>
+            <span class="tool-name">${escapeHtml(tool.name)}</span>
+            <span class="tool-toggle">&#9654;</span>
+          </div>
+          <div class="tool-details">
+            <div class="tool-label">Arguments</div>
+            <div class="tool-content">${escapeHtml(argsDisplay)}</div>
+            <div class="tool-label">Result</div>
+            <div class="tool-content ${tool.isError ? 'tool-error' : ''}">${escapeHtml(tool.output || '(empty)')}</div>
+          </div>
+        `;
+
+        const header = card.querySelector('.tool-header');
+        const details = card.querySelector('.tool-details');
+        const toggle = card.querySelector('.tool-toggle');
+        header.addEventListener('click', () => {
+          details.classList.toggle('open');
+          toggle.classList.toggle('open');
+        });
+
+        chatEl.appendChild(card);
+        scrollChat();
+      }
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    // --- Thinking indicator ---
+    const thinkingEl = document.createElement('div');
+    thinkingEl.className = 'thinking';
+    thinkingEl.innerHTML = '<div class="thinking-dots"><span></span><span></span><span></span></div>&nbsp;Thinking...';
+
+    function showThinking(show) {
+      if (show) {
+        thinkingEl.classList.add('visible');
+        if (!thinkingEl.parentElement) chatEl.appendChild(thinkingEl);
+        scrollChat();
+      } else {
+        thinkingEl.classList.remove('visible');
+      }
+    }
+
+    // --- Voice toggle ---
+    voiceBtn.addEventListener('click', async () => {
+      if (!room) return;
+      voiceEnabled = !voiceEnabled;
+      voiceBtn.classList.toggle('active', voiceEnabled);
+
+      await room.localParticipant.setMicrophoneEnabled(voiceEnabled);
+      // Mute/unmute agent audio
+      audioElements.forEach(el => { el.muted = !voiceEnabled; });
+
+      debug(`Voice ${voiceEnabled ? 'enabled' : 'disabled'}`);
+    });
+
+    // --- Text input ---
+    async function sendMessage() {
+      const text = textInput.value.trim();
+      if (!text || !room) return;
+
+      textInput.value = '';
+      addUserMessage(text);
+
+      try {
+        await room.localParticipant.sendText(text, { topic: 'lk.chat' });
+        debug(`Sent text: "${text}"`);
+      } catch (err) {
+        debug(`Send error: ${err.message}`, 'error');
+      }
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    textInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    // --- Debug panel toggle ---
+    debugBtn.addEventListener('click', () => debugPanel.classList.add('open'));
+    debugClose.addEventListener('click', () => debugPanel.classList.remove('open'));
+
+    // --- Connect ---
+    async function connect() {
+      if (room) return; // already connected or connecting
+
+      statusBadge.textContent = 'Connecting...';
+      statusBadge.className = 'status-badge';
+      debug('Fetching token from /api/token...');
 
       try {
         const res = await fetch('/api/token');
         if (!res.ok) throw new Error(`Token API returned ${res.status}: ${await res.text()}`);
         const { token, url, identity, room: roomName } = await res.json();
-        log(`Token received: identity=${identity}, room=${roomName}`, 'msg-debug');
-        log(`LiveKit URL: ${url}`, 'msg-debug');
+        debug(`Token received: identity=${identity}, room=${roomName}`);
 
-        room = new Room({
-          adaptiveStream: true,
-          dynacast: true,
-        });
+        room = new Room({ adaptiveStream: true, dynacast: true });
 
-        // Connection state changes
+        // Connection state
         room.on(RoomEvent.ConnectionStateChanged, (state) => {
-          log(`Connection state: ${state}`, 'msg-debug');
-          statusEl.textContent = `Connection: ${state}`;
+          debug(`Connection state: ${state}`, 'info');
         });
 
         // Track subscriptions (agent audio)
         room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
-          log(`Track subscribed: ${track.kind} from ${participant.identity} (sid: ${track.sid})`, 'msg-debug');
+          debug(`Track subscribed: ${track.kind} from ${participant.identity}`);
           if (track.kind === Track.Kind.Audio) {
             const el = track.attach();
             el.style.display = 'none';
+            el.muted = !voiceEnabled;
             document.body.appendChild(el);
-            log(`Audio track attached from ${participant.identity}`, 'msg-system');
+            audioElements.push(el);
+            debug(`Audio attached from ${participant.identity}`);
           }
         });
 
-        room.on(RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
-          log(`Track unsubscribed: ${track.kind} from ${participant.identity}`, 'msg-debug');
-          track.detach().forEach(el => el.remove());
+        room.on(RoomEvent.TrackUnsubscribed, (track) => {
+          const detached = track.detach();
+          detached.forEach(el => {
+            audioElements = audioElements.filter(a => a !== el);
+            el.remove();
+          });
         });
 
-        // Track published (local)
-        room.on(RoomEvent.LocalTrackPublished, (publication, participant) => {
-          log(`Local track published: ${publication.kind} (sid: ${publication.trackSid})`, 'msg-debug');
+        room.on(RoomEvent.LocalTrackPublished, (publication) => {
+          debug(`Local track published: ${publication.kind}`);
         });
 
         // Participants
         room.on(RoomEvent.ParticipantConnected, (participant) => {
-          log(`Participant joined: ${participant.identity}`, 'msg-system');
+          debug(`Participant joined: ${participant.identity}`);
         });
-
         room.on(RoomEvent.ParticipantDisconnected, (participant) => {
-          log(`Participant left: ${participant.identity}`, 'msg-system');
+          debug(`Participant left: ${participant.identity}`);
         });
 
-        // Disconnect
-        room.on(RoomEvent.Disconnected, (reason) => {
-          log(`Disconnected: ${reason ?? 'unknown reason'}`, 'msg-system');
-          statusEl.textContent = 'Disconnected';
-          agentStateEl.textContent = '';
-          connectBtn.disabled = false;
-          disconnectBtn.disabled = true;
-        });
-
-        // Data messages
-        room.on(RoomEvent.DataReceived, (data, participant, kind, topic) => {
-          log(`Data received: topic=${topic}, from=${participant?.identity ?? 'server'}, ${data.byteLength} bytes`, 'msg-debug');
-          try {
-            const msg = JSON.parse(new TextDecoder().decode(data));
-            if (msg.message) {
-              const isAgent = participant?.identity !== room.localParticipant?.identity;
-              log(msg.message, isAgent ? 'msg-agent' : 'msg-user');
+        // Participant attributes (agent state)
+        room.on(RoomEvent.ParticipantAttributesChanged, (changedAttrs, participant) => {
+          if (participant.identity !== room?.localParticipant?.identity) {
+            const agentState = participant.attributes?.['lk.agent.state'];
+            if (agentState) {
+              debug(`Agent state: ${agentState}`);
+              showThinking(agentState === 'thinking');
             }
-          } catch {}
+          }
+        });
+
+        // Disconnect — auto-reconnect after delay
+        room.on(RoomEvent.Disconnected, (reason) => {
+          debug(`Disconnected: ${reason ?? 'unknown'}`, 'info');
+          addSystemMessage('Disconnected. Reconnecting...');
+          statusBadge.textContent = 'Reconnecting...';
+          statusBadge.className = 'status-badge';
+          textInput.disabled = true;
+          sendBtn.disabled = true;
+          voiceBtn.disabled = true;
+          voiceBtn.classList.remove('active');
+          showThinking(false);
+          activeSegments.clear();
+          room = null;
+          audioElements = [];
+
+          // Auto-reconnect after 2 seconds
+          clearTimeout(reconnectTimer);
+          reconnectTimer = setTimeout(connect, 2000);
+        });
+
+        // Data messages (tool calls from agent)
+        room.on(RoomEvent.DataReceived, (data, participant, kind, topic) => {
+          debug(`Data received: topic=${topic}, from=${participant?.identity ?? 'server'}, ${data.byteLength} bytes`);
+          if (topic === 'botical.events') {
+            try {
+              const msg = JSON.parse(new TextDecoder().decode(data));
+              if (msg.type === 'tool_calls' && msg.tools) {
+                toolSound.currentTime = 0;
+                toolSound.play().catch(() => {});
+                addToolCard(msg.tools);
+              }
+            } catch (err) {
+              debug(`Failed to parse event data: ${err.message}`, 'error');
+            }
+          }
         });
 
         // Transcriptions
         room.on(RoomEvent.TranscriptionReceived, (segments, participant) => {
+          const isUser = participant?.identity === room.localParticipant?.identity;
+
           for (const seg of segments) {
-            const who = participant?.identity === room.localParticipant?.identity ? 'You' : participant?.identity ?? 'unknown';
+            if (!seg.text?.trim()) continue;
+
             if (seg.final) {
-              log(`${who}: ${seg.text}`, participant?.identity === room.localParticipant?.identity ? 'msg-user' : 'msg-agent');
+              // Final segment — solidify or create
+              const existing = activeSegments.get(seg.id);
+              if (existing) {
+                existing.textContent = seg.text;
+                existing.classList.remove('interim');
+                activeSegments.delete(seg.id);
+              } else {
+                if (isUser) {
+                  addUserMessage(seg.text);
+                } else {
+                  addAgentMessage(seg.text);
+                }
+              }
+              debug(`[${isUser ? 'user' : 'agent'}:final] "${seg.text}"`);
             } else {
-              log(`${who} (interim): ${seg.text}`, 'msg-debug');
+              // Interim segment — update or create faded bubble
+              const existing = activeSegments.get(seg.id);
+              if (existing) {
+                existing.textContent = seg.text;
+              } else {
+                const div = document.createElement('div');
+                div.className = `msg ${isUser ? 'user' : 'agent'} interim`;
+                div.textContent = seg.text;
+                chatEl.appendChild(div);
+                activeSegments.set(seg.id, div);
+              }
+              debug(`[${isUser ? 'user' : 'agent'}:interim] "${seg.text}"`);
             }
+            scrollChat();
           }
+        });
+
+        // Reconnection (LiveKit built-in, for brief interruptions)
+        room.on(RoomEvent.Reconnecting, () => {
+          debug('Reconnecting...');
+          statusBadge.textContent = 'Reconnecting...';
+          statusBadge.className = 'status-badge';
+        });
+        room.on(RoomEvent.Reconnected, () => {
+          debug('Reconnected');
+          statusBadge.textContent = 'Connected';
+          statusBadge.className = 'status-badge connected';
+          addSystemMessage('Reconnected.');
         });
 
         // Active speakers
         room.on(RoomEvent.ActiveSpeakersChanged, (speakers) => {
           if (speakers.length > 0) {
-            const names = speakers.map(s => s.identity).join(', ');
-            agentStateEl.textContent = `Speaking: ${names}`;
-          } else {
-            agentStateEl.textContent = '';
+            debug(`Active speakers: ${speakers.map(s => s.identity).join(', ')}`, 'info');
           }
         });
 
-        // Signal reconnection
-        room.on(RoomEvent.Reconnecting, () => {
-          log('Reconnecting...', 'msg-debug');
-        });
-        room.on(RoomEvent.Reconnected, () => {
-          log('Reconnected', 'msg-debug');
-        });
-
-        // Connect
-        log(`Connecting to ${url}...`, 'msg-debug');
-        statusEl.textContent = 'Connecting to LiveKit...';
+        // Connect to room
+        debug(`Connecting to ${url}...`);
         await room.connect(url, token);
-        log(`Connected! Room: ${room.name}, Local: ${room.localParticipant.identity}`, 'msg-system');
+        debug(`Connected to room: ${room.name}`);
 
         // List existing participants
         const remotes = Array.from(room.remoteParticipants.values());
         if (remotes.length > 0) {
-          log(`${remotes.length} participant(s) already in room: ${remotes.map(p => p.identity).join(', ')}`, 'msg-debug');
-        } else {
-          log('No other participants in room yet (waiting for agent...)', 'msg-debug');
+          debug(`${remotes.length} participant(s) in room: ${remotes.map(p => p.identity).join(', ')}`);
         }
 
-        // Enable microphone
-        log('Enabling microphone...', 'msg-debug');
-        statusEl.textContent = 'Enabling microphone...';
-        await room.localParticipant.setMicrophoneEnabled(true);
-        log('Microphone enabled', 'msg-system');
+        // Update UI state
+        statusBadge.textContent = 'Connected';
+        statusBadge.className = 'status-badge connected';
+        textInput.disabled = false;
+        sendBtn.disabled = false;
+        voiceBtn.disabled = false;
+        textInput.focus();
 
-        statusEl.textContent = `Connected as ${identity}`;
-        disconnectBtn.disabled = false;
-        log('Ready — speak to start a conversation', 'msg-system');
+        addSystemMessage('Connected. Speak or type to start a conversation.');
+
       } catch (err) {
-        log(`ERROR: ${err.message}`, 'msg-error');
-        statusEl.textContent = `Error: ${err.message}`;
-        connectBtn.disabled = false;
+        debug(`Connection error: ${err.message}`, 'error');
+        statusBadge.textContent = 'Reconnecting...';
+        statusBadge.className = 'status-badge';
+        room = null;
         console.error('[client] Connection error:', err);
-      }
-    };
 
-    disconnectBtn.onclick = () => {
-      log('Disconnecting...', 'msg-debug');
-      room?.disconnect();
-      room = null;
-    };
+        // Retry after 3 seconds
+        clearTimeout(reconnectTimer);
+        reconnectTimer = setTimeout(connect, 3000);
+      }
+    }
+
+    // Auto-connect on page load
+    connect();
   </script>
 </body>
 </html>
