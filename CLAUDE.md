@@ -109,6 +109,25 @@ The agent must be explicitly dispatched to a room. This is handled automatically
 
 Without explicit dispatch, the agent worker registers but never receives jobs.
 
+## Production Deployment
+
+In production, LiveKit runs as a separate process (managed by systemd) with its own config file and API keys. The token server skips starting its own LiveKit child process.
+
+### Key Environment Variables
+
+| Variable | Dev Default | Production | Description |
+|----------|-------------|------------|-------------|
+| `LIVEKIT_API_KEY` | `devkey` | Real key | LiveKit API key |
+| `LIVEKIT_API_SECRET` | `secret` | Real secret | LiveKit API secret |
+| `LIVEKIT_URL` | `ws://localhost:7880` | `ws://localhost:7880` | Internal URL (agent SDK reads this) |
+| `LIVEKIT_PUBLIC_URL` | (not set) | `wss://domain/rtc` | Public URL returned to browsers |
+| `LIVEKIT_HOST` | `http://localhost:7880` | `http://localhost:7880` | Internal URL for dispatch API |
+| `LIVEKIT_EXTERNAL` | (not set) | `true` | Skip child LiveKit process in token server |
+
+**Important**: `LIVEKIT_URL` must always be the internal localhost URL. The LiveKit agents SDK reads `process.env.LIVEKIT_URL` as a fallback for its WebSocket connection. Setting it to the public URL would route the agent through the reverse proxy instead of connecting directly.
+
+See `DEPLOYMENT.md` (gitignored) for full server setup details.
+
 ## Logging
 
 The agent outputs comprehensive timestamped logs for every pipeline stage:

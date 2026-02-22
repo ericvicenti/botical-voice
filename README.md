@@ -51,22 +51,33 @@ The frontend is bundled and minified with content-hashed filenames. The LiveKit 
 
 ## Running in Production
 
+In production, LiveKit runs as a separate process with its own config and API keys. Set `LIVEKIT_EXTERNAL=true` to tell the token server to skip starting its own LiveKit child process.
+
 ```bash
-bun run src/token-server.ts &   # serves client + API on port 3000, starts LiveKit
+# Start LiveKit separately (with your own config)
+./dist/livekit-server --config livekit.yaml --node-ip <your-ip>
+
+# Start the token server and agent
+bun run src/token-server.ts &   # serves client + API on port 3000
 bun run start                   # starts the voice agent
 ```
 
-The token server will use the pre-built `dist/livekit-server` binary if it exists (from `bun run build:livekit`), otherwise falls back to `go run`.
+In dev mode (without `LIVEKIT_EXTERNAL`), the token server will use the pre-built `dist/livekit-server` binary if it exists, otherwise falls back to `go run`.
 
 ### Environment Variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `ANTHROPIC_API_KEY` | Yes | Anthropic API key for Claude LLM |
-| `DEEPGRAM_API_KEY` | Yes | Deepgram API key for streaming STT |
-| `CARTESIA_API_KEY` | Yes | Cartesia API key for TTS |
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `ANTHROPIC_API_KEY` | Yes | | Anthropic API key for Claude LLM |
+| `DEEPGRAM_API_KEY` | Yes | | Deepgram API key for streaming STT |
+| `CARTESIA_API_KEY` | Yes | | Cartesia API key for TTS |
+| `LIVEKIT_API_KEY` | No | `devkey` | LiveKit API key |
+| `LIVEKIT_API_SECRET` | No | `secret` | LiveKit API secret |
+| `LIVEKIT_URL` | No | `ws://localhost:7880` | Internal LiveKit URL (used by agent) |
+| `LIVEKIT_PUBLIC_URL` | No | (falls back to `LIVEKIT_URL`) | Public LiveKit URL (returned to browsers) |
+| `LIVEKIT_EXTERNAL` | No | | Set to `true` to skip starting LiveKit child process |
 
-LiveKit runs locally with hardcoded dev credentials — no `LIVEKIT_*` env vars needed.
+In dev mode, LiveKit runs locally with hardcoded dev credentials — no `LIVEKIT_*` env vars needed.
 
 ## Architecture
 
