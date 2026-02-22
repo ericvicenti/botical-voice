@@ -175,28 +175,46 @@ export default defineAgent({
     });
 
     // --- Room events ---
-    ctx.room.on('participantConnected', (participant) => {
+    const onParticipantConnected = (participant: any) => {
       console.log(`[${ts()}] [room] participant joined: ${participant.identity}`);
-    });
-
-    ctx.room.on('participantDisconnected', (participant) => {
+    };
+    const onParticipantDisconnected = (participant: any) => {
       console.log(`[${ts()}] [room] participant left: ${participant.identity}`);
-    });
-
-    ctx.room.on('trackSubscribed', (track, publication, participant) => {
+    };
+    const onTrackSubscribed = (track: any, _publication: any, participant: any) => {
       console.log(`[${ts()}] [room] subscribed to ${track.kind} track from ${participant.identity}`);
-    });
-
-    ctx.room.on('disconnected', () => {
+    };
+    const onDisconnected = () => {
       console.log(`[${ts()}] [room] disconnected`);
-    });
+    };
+
+    ctx.room.on('participantConnected', onParticipantConnected);
+    ctx.room.on('participantDisconnected', onParticipantDisconnected);
+    ctx.room.on('trackSubscribed', onTrackSubscribed);
+    ctx.room.on('disconnected', onDisconnected);
 
     ctx.addShutdownCallback(async () => {
       console.log(`[${ts()}] [shutdown] closing session...`);
       await session.close();
+
+      // Clean up turn detector ONNX model (framework doesn't do this)
+      try {
+        await (session.turnDetection as any)?.close?.();
+      } catch {}
+
+      // Remove room event listeners to prevent accumulation across jobs
+      ctx.room.off('participantConnected', onParticipantConnected);
+      ctx.room.off('participantDisconnected', onParticipantDisconnected);
+      ctx.room.off('trackSubscribed', onTrackSubscribed);
+      ctx.room.off('disconnected', onDisconnected);
+
+      const mem = process.memoryUsage();
+      console.log(`[${ts()}] [shutdown] memory: rss=${Math.round(mem.rss / 1024 / 1024)}MB, heap=${Math.round(mem.heapUsed / 1024 / 1024)}MB`);
       console.log(`[${ts()}] [shutdown] done`);
     });
 
+    const mem = process.memoryUsage();
+    console.log(`[${ts()}] [entry] memory before session start: rss=${Math.round(mem.rss / 1024 / 1024)}MB, heap=${Math.round(mem.heapUsed / 1024 / 1024)}MB`);
     console.log(`[${ts()}] [entry] starting agent session...`);
     await session.start({
       agent: new BotAgent(),
