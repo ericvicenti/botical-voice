@@ -61,6 +61,7 @@ export default defineAgent({
         minEndpointingDelay: 0.5,
         maxEndpointingDelay: 3.0,
         preemptiveGeneration: true,
+        userAwayTimeout: 30,
       },
     });
 
@@ -108,6 +109,9 @@ export default defineAgent({
     // --- User state ---
     session.on(Events.UserStateChanged, (ev) => {
       console.log(`[${ts()}] [user-state] ${ev.oldState} → ${ev.newState}`);
+      if (ev.newState === 'away') {
+        session.generateReply({ userInput: '[The user has been quiet for a while. Check in briefly.]' });
+      }
     });
 
     // --- Transcription ---
