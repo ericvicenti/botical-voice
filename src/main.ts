@@ -42,13 +42,17 @@ export default defineAgent({
         language: 'en',
       }),
       llm: new openai.LLM({
-        model: 'claude-haiku-4-5-20251001',
+        model: 'claude-sonnet-4-6',
         apiKey: process.env.ANTHROPIC_API_KEY ?? '',
         baseURL: 'https://api.anthropic.com/v1/',
         temperature: 0.8,
       }),
       tts: new cartesia.TTS({
         language: 'en',
+        voice: '6c9e08ad-6629-4ba3-a640-a0bae916dfff',
+        model: 'sonic-3',
+        speed: 'slow',
+        emotion: ['positivity:high']
       }),
       turnDetection: new livekit.turnDetector.MultilingualModel(),
       voiceOptions: {

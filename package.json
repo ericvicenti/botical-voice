@@ -22,7 +22,8 @@
       "sharp"
     ],
     "patchedDependencies": {
-      "@livekit/agents": "patches/@livekit__agents.patch"
+      "@livekit/agents": "patches/@livekit__agents.patch",
+      "@livekit/agents-plugin-cartesia": "patches/@livekit__agents-plugin-cartesia.patch"
     }
   },
   "dependencies": {

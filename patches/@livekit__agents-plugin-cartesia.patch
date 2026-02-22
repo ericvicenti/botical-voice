@@ -1,0 +1,67 @@
+diff --git a/dist/tts.cjs b/dist/tts.cjs
+index 11f52ec49d5ac502c8be64ede45b47475e05604d..9b7cf5434eecaaf85c8d973a7ea7277502dfd35c 100644
+--- a/dist/tts.cjs
++++ b/dist/tts.cjs
+@@ -32,7 +32,7 @@ const AUTHORIZATION_HEADER = "X-API-Key";
+ const VERSION_HEADER = "Cartesia-Version";
+ const VERSION = "2024-06-10";
+ const NUM_CHANNELS = 1;
+-const BUFFERED_WORDS_COUNT = 8;
++const BUFFERED_WORDS_COUNT = 200;
+ const defaultTTSOptions = {
+   model: "sonic-2",
+   encoding: "pcm_s16le",
+@@ -169,7 +169,8 @@ class SynthesizeStream extends import_agents.tts.SynthesizeStream {
+   #opts;
+   #logger = (0, import_agents.log)();
+   #tokenizer = new import_agents.tokenize.basic.SentenceTokenizer({
+-    minSentenceLength: BUFFERED_WORDS_COUNT
++    minSentenceLength: BUFFERED_WORDS_COUNT,
++    streamContextLength: 100
+   }).stream();
+   label = "cartesia.SynthesizeStream";
+   constructor(tts2, opts, connOptions) {
+diff --git a/dist/tts.js b/dist/tts.js
+index b845febdb8ccd729bb8397a5533b18cd11fca236..dc3f0924f66d6f62834b288861e51fdb472534bc 100644
+--- a/dist/tts.js
++++ b/dist/tts.js
+@@ -26,7 +26,7 @@ const AUTHORIZATION_HEADER = "X-API-Key";
+ const VERSION_HEADER = "Cartesia-Version";
+ const VERSION = "2024-06-10";
+ const NUM_CHANNELS = 1;
+-const BUFFERED_WORDS_COUNT = 8;
++const BUFFERED_WORDS_COUNT = 200;
+ const defaultTTSOptions = {
+   model: "sonic-2",
+   encoding: "pcm_s16le",
+@@ -163,7 +163,8 @@ class SynthesizeStream extends tts.SynthesizeStream {
+   #opts;
+   #logger = log();
+   #tokenizer = new tokenize.basic.SentenceTokenizer({
+-    minSentenceLength: BUFFERED_WORDS_COUNT
++    minSentenceLength: BUFFERED_WORDS_COUNT,
++    streamContextLength: 100
+   }).stream();
+   label = "cartesia.SynthesizeStream";
+   constructor(tts2, opts, connOptions) {
+diff --git a/src/tts.ts b/src/tts.ts
+index 37cfcf3679cca69faa542d3b5e3c38374e007814..51db603cfe57d5238907859b183d0574a94f4373 100644
+--- a/src/tts.ts
++++ b/src/tts.ts
+@@ -38,7 +38,7 @@ const AUTHORIZATION_HEADER = 'X-API-Key';
+ const VERSION_HEADER = 'Cartesia-Version';
+ const VERSION = '2024-06-10';
+ const NUM_CHANNELS = 1;
+-const BUFFERED_WORDS_COUNT = 8;
++const BUFFERED_WORDS_COUNT = 200;
+ 
+ export interface TTSOptions {
+   model: TTSModels | string;
+@@ -231,6 +231,7 @@ export class SynthesizeStream extends tts.SynthesizeStream {
+   #logger = log();
+   #tokenizer = new tokenize.basic.SentenceTokenizer({
+     minSentenceLength: BUFFERED_WORDS_COUNT,
++    streamContextLength: 100,
+   }).stream();
+   label = 'cartesia.SynthesizeStream';
+ 

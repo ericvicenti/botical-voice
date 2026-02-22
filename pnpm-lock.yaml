@@ -8,6 +8,9 @@ patchedDependencies:
   '@livekit/agents':
     hash: ad44d9a3bc6b4151486c492c786e8ca2ccd0e69241b47bf73f5343e44f636517
     path: patches/@livekit__agents.patch
+  '@livekit/agents-plugin-cartesia':
+    hash: ca170a7c896e8b303d8ab152677378a0a0c808614d87105cfaa51bf3d4f0aa67
+    path: patches/@livekit__agents-plugin-cartesia.patch
 
 importers:
 
@@ -18,7 +21,7 @@ importers:
         version: 1.0.47(patch_hash=ad44d9a3bc6b4151486c492c786e8ca2ccd0e69241b47bf73f5343e44f636517)(@livekit/rtc-node@0.13.24)(zod@4.3.6)
       '@livekit/agents-plugin-cartesia':
         specifier: ^1.0.47
-        version: 1.0.47(@livekit/agents@1.0.47(patch_hash=ad44d9a3bc6b4151486c492c786e8ca2ccd0e69241b47bf73f5343e44f636517)(@livekit/rtc-node@0.13.24)(zod@4.3.6))(@livekit/rtc-node@0.13.24)(zod@4.3.6)
+        version: 1.0.47(patch_hash=ca170a7c896e8b303d8ab152677378a0a0c808614d87105cfaa51bf3d4f0aa67)(@livekit/agents@1.0.47(patch_hash=ad44d9a3bc6b4151486c492c786e8ca2ccd0e69241b47bf73f5343e44f636517)(@livekit/rtc-node@0.13.24)(zod@4.3.6))(@livekit/rtc-node@0.13.24)(zod@4.3.6)
       '@livekit/agents-plugin-deepgram':
         specifier: ^1.0.47
         version: 1.0.47(@livekit/agents@1.0.47(patch_hash=ad44d9a3bc6b4151486c492c786e8ca2ccd0e69241b47bf73f5343e44f636517)(@livekit/rtc-node@0.13.24)(zod@4.3.6))(@livekit/rtc-node@0.13.24)
@@ -1743,7 +1746,7 @@ snapshots:
     dependencies:
       minipass: 7.1.3
 
-  '@livekit/agents-plugin-cartesia@1.0.47(@livekit/agents@1.0.47(patch_hash=ad44d9a3bc6b4151486c492c786e8ca2ccd0e69241b47bf73f5343e44f636517)(@livekit/rtc-node@0.13.24)(zod@4.3.6))(@livekit/rtc-node@0.13.24)(zod@4.3.6)':
+  '@livekit/agents-plugin-cartesia@1.0.47(patch_hash=ca170a7c896e8b303d8ab152677378a0a0c808614d87105cfaa51bf3d4f0aa67)(@livekit/agents@1.0.47(patch_hash=ad44d9a3bc6b4151486c492c786e8ca2ccd0e69241b47bf73f5343e44f636517)(@livekit/rtc-node@0.13.24)(zod@4.3.6))(@livekit/rtc-node@0.13.24)(zod@4.3.6)':
     dependencies:
       '@livekit/agents': 1.0.47(patch_hash=ad44d9a3bc6b4151486c492c786e8ca2ccd0e69241b47bf73f5343e44f636517)(@livekit/rtc-node@0.13.24)(zod@4.3.6)
       '@livekit/rtc-node': 0.13.24

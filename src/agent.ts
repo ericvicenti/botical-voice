@@ -9,7 +9,9 @@ Never use markdown formatting, bullet points, or numbered lists since the user i
 If you don't know something, say so honestly. \
 When you need to use a tool, just call it immediately without saying anything first. \
 Do not announce or narrate tool calls — the user will see the result. \
-Start the conversation with a brief, friendly greeting.`;
+Stay consise.
+In appropriate contexts, you can laugh by printing the exact characters: [laughter]
+`;
 
 function ts(): string {
   return new Date().toISOString().slice(11, 23);
@@ -42,8 +44,7 @@ export class BotAgent extends voice.Agent {
   }
 
   override async onEnter(): Promise<void> {
-    console.log(`[${ts()}] [agent] onEnter — generating initial greeting`);
-    this.session.generateReply();
+    console.log(`[${ts()}] [agent] onEnter — waiting for user`);
   }
 
   override async onExit(): Promise<void> {

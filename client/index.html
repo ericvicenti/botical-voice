@@ -99,36 +99,39 @@
     .msg.interim {
       opacity: 0.5;
     }
-    .msg.system {
-      align-self: center;
-      background: none;
-      color: #555;
-      font-size: 0.8rem;
-      padding: 4px 0;
-    }
-
-    /* --- Thinking indicator --- */
-    .thinking {
-      align-self: flex-start;
-      color: #666;
-      font-size: 0.8rem;
-      padding: 6px 14px;
+    /* --- Voice state indicator --- */
+    .voice-state {
       display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 6px 16px;
+      background: #0f0f0f;
+      border-top: 1px solid #1e1e1e;
+      flex-shrink: 0;
+      font-size: 0.8rem;
+      color: #666;
     }
-    .thinking.visible { display: flex; gap: 4px; align-items: center; }
-    .thinking-dots span {
-      display: inline-block;
-      width: 5px;
-      height: 5px;
+    .voice-state.visible { display: flex; }
+    .voice-state-dot {
+      width: 6px;
+      height: 6px;
       border-radius: 50%;
-      background: #666;
-      animation: dot 1.2s infinite;
+      background: #555;
+      transition: background 0.2s;
     }
-    .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
-    .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes dot {
-      0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
-      40% { opacity: 1; transform: scale(1); }
+    .voice-state.listening .voice-state-dot { background: #4CAF50; }
+    .voice-state.thinking .voice-state-dot {
+      background: #FFB74D;
+      animation: pulse 1.2s infinite;
+    }
+    .voice-state.speaking .voice-state-dot {
+      background: #42A5F5;
+      animation: pulse 0.8s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 1; }
     }
 
     /* --- Tool call cards --- */
@@ -308,8 +311,13 @@
   <!-- Chat -->
   <div class="chat-container">
     <div class="chat-messages" id="chat">
-      <div class="msg system">Connecting...</div>
     </div>
+  </div>
+
+  <!-- Voice state indicator -->
+  <div class="voice-state" id="voice-state">
+    <span class="voice-state-dot"></span>
+    <span class="voice-state-label">Waiting</span>
   </div>
 
   <!-- Input bar -->
@@ -362,6 +370,7 @@
     let voiceEnabled = false;
     let audioElements = [];
     let reconnectTimer = null;
+    let voiceGreetingSent = false;
 
     // Preload tool call sound
     const toolSound = new Audio('/assets/SimpleClicks.wav');
@@ -386,14 +395,6 @@
       const el = chatEl;
       const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
       if (atBottom) el.scrollTop = el.scrollHeight;
-    }
-
-    function addSystemMessage(text) {
-      const div = document.createElement('div');
-      div.className = 'msg system';
-      div.textContent = text;
-      chatEl.appendChild(div);
-      scrollChat();
     }
 
     function addUserMessage(text) {
@@ -458,19 +459,50 @@
       return div.innerHTML;
     }
 
-    // --- Thinking indicator ---
-    const thinkingEl = document.createElement('div');
-    thinkingEl.className = 'thinking';
-    thinkingEl.innerHTML = '<div class="thinking-dots"><span></span><span></span><span></span></div>&nbsp;Thinking...';
+    // --- Voice state indicator ---
+    const voiceStateEl = document.getElementById('voice-state');
+    const voiceStateLabelEl = voiceStateEl.querySelector('.voice-state-label');
+    let currentAgentState = 'initializing';
+    let userSpeaking = false;
 
-    function showThinking(show) {
-      if (show) {
-        thinkingEl.classList.add('visible');
-        if (!thinkingEl.parentElement) chatEl.appendChild(thinkingEl);
-        scrollChat();
+    function refreshVoiceState() {
+      voiceStateEl.className = 'voice-state' + (voiceEnabled ? ' visible' : '');
+
+      let label, stateClass;
+      if (currentAgentState === 'listening' && userSpeaking) {
+        label = 'Listening';
+        stateClass = 'listening';
+      } else if (currentAgentState === 'listening') {
+        label = 'Waiting';
+        stateClass = '';
+      } else if (currentAgentState === 'thinking') {
+        label = 'Thinking';
+        stateClass = 'thinking';
+      } else if (currentAgentState === 'speaking') {
+        label = 'Speaking';
+        stateClass = 'speaking';
       } else {
-        thinkingEl.classList.remove('visible');
+        label = 'Waiting';
+        stateClass = '';
       }
+
+      voiceStateLabelEl.textContent = label;
+      voiceStateEl.classList.remove('listening', 'thinking', 'speaking');
+      if (stateClass) voiceStateEl.classList.add(stateClass);
+    }
+
+    function updateVoiceState(agentState) {
+      currentAgentState = agentState;
+      refreshVoiceState();
+    }
+
+    function setUserSpeaking(speaking) {
+      userSpeaking = speaking;
+      refreshVoiceState();
+    }
+
+    function updateVoiceStateVisibility() {
+      refreshVoiceState();
     }
 
     // --- Voice toggle ---
@@ -482,6 +514,13 @@
       await room.localParticipant.setMicrophoneEnabled(voiceEnabled);
       // Mute/unmute agent audio
       audioElements.forEach(el => { el.muted = !voiceEnabled; });
+      updateVoiceStateVisibility();
+
+      // Trigger agent greeting on first voice enable
+      if (voiceEnabled && !voiceGreetingSent) {
+        voiceGreetingSent = true;
+        room.localParticipant.sendText('hi', { topic: 'lk.chat' }).catch(() => {});
+      }
 
       debug(`Voice ${voiceEnabled ? 'enabled' : 'disabled'}`);
     });
@@ -574,7 +613,7 @@
             const agentState = participant.attributes?.['lk.agent.state'];
             if (agentState) {
               debug(`Agent state: ${agentState}`);
-              showThinking(agentState === 'thinking');
+              updateVoiceState(agentState);
             }
           }
         });
@@ -582,14 +621,15 @@
         // Disconnect — auto-reconnect after delay
         room.on(RoomEvent.Disconnected, (reason) => {
           debug(`Disconnected: ${reason ?? 'unknown'}`, 'info');
-          addSystemMessage('Disconnected. Reconnecting...');
+          // Status badge handles connection state display
           statusBadge.textContent = 'Reconnecting...';
           statusBadge.className = 'status-badge';
           textInput.disabled = true;
           sendBtn.disabled = true;
           voiceBtn.disabled = true;
           voiceBtn.classList.remove('active');
-          showThinking(false);
+          userSpeaking = false;
+          updateVoiceState('initializing');
           activeSegments.clear();
           room = null;
           audioElements = [];
@@ -666,11 +706,13 @@
           debug('Reconnected');
           statusBadge.textContent = 'Connected';
           statusBadge.className = 'status-badge connected';
-          addSystemMessage('Reconnected.');
+          // Status badge handles reconnection display
         });
 
         // Active speakers
         room.on(RoomEvent.ActiveSpeakersChanged, (speakers) => {
+          const localId = room?.localParticipant?.identity;
+          setUserSpeaking(speakers.some(s => s.identity === localId));
           if (speakers.length > 0) {
             debug(`Active speakers: ${speakers.map(s => s.identity).join(', ')}`, 'info');
           }
@@ -695,7 +737,7 @@
         voiceBtn.disabled = false;
         textInput.focus();
 
-        addSystemMessage('Connected. Speak or type to start a conversation.');
+        // Status badge handles connected display
 
       } catch (err) {
         debug(`Connection error: ${err.message}`, 'error');
