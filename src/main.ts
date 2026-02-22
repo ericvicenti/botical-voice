@@ -162,7 +162,9 @@ export default defineAgent({
 
     // --- Errors and close ---
     session.on(Events.Error, (ev) => {
-      console.error(`[${ts()}] [error] source: ${ev.source}, error:`, ev.error);
+      const err = ev.error;
+      const msg = err instanceof Error ? `${err.message}\n${err.stack}` : JSON.stringify(err);
+      console.error(`[${ts()}] [error] source: ${JSON.stringify(ev.source)}, error: ${msg}`);
     });
 
     session.on(Events.Close, (ev) => {
